@@ -277,4 +277,96 @@ describe("useWorkflowStore", () => {
       expect(useWorkflowStore.getState().maxCompletedStep).toBe(3);
     });
   });
+
+  describe("step transition scenarios", () => {
+    it("should allow sequential step completion (typical workflow)", () => {
+      const store = useWorkflowStore.getState();
+
+      // Typical user flow: complete step 1, navigate to step 2
+      store.completeStep(1);
+      expect(useWorkflowStore.getState().canNavigateTo(2)).toBe(true);
+
+      store.setCurrentStep(2);
+      expect(useWorkflowStore.getState().currentStep).toBe(2);
+
+      // Complete step 2, navigate to step 3
+      store.completeStep(2);
+      expect(useWorkflowStore.getState().canNavigateTo(3)).toBe(true);
+
+      store.setCurrentStep(3);
+      expect(useWorkflowStore.getState().currentStep).toBe(3);
+    });
+
+    it("should prevent skipping steps", () => {
+      const store = useWorkflowStore.getState();
+
+      // Try to jump from step 1 to step 4 without completing intermediate steps
+      store.setCurrentStep(4);
+      expect(useWorkflowStore.getState().currentStep).toBe(1); // Should still be 1
+
+      // Complete step 1, still can't jump to step 4
+      store.completeStep(1);
+      store.setCurrentStep(4);
+      expect(useWorkflowStore.getState().currentStep).toBe(1); // Still can't skip
+    });
+
+    it("should track completion status through full workflow", () => {
+      const store = useWorkflowStore.getState();
+
+      // Simulate completing research step (step 1)
+      store.completeStep(1);
+      expect(useWorkflowStore.getState().getStepStatus(1)).toBe("completed");
+      expect(useWorkflowStore.getState().getStepStatus(2)).toBe("upcoming");
+
+      // Simulate completing content step (step 2)
+      store.setCurrentStep(2);
+      store.completeStep(2);
+      expect(useWorkflowStore.getState().getStepStatus(2)).toBe("completed");
+      expect(useWorkflowStore.getState().getStepStatus(3)).toBe("upcoming");
+
+      // Verify can navigate back
+      expect(useWorkflowStore.getState().canNavigateTo(1)).toBe(true);
+    });
+
+    it("should handle re-completing previously completed steps", () => {
+      const store = useWorkflowStore.getState();
+
+      store.completeStep(1);
+      store.completeStep(2);
+      store.completeStep(3);
+
+      // Go back to step 2 and "re-complete" it
+      store.setCurrentStep(2);
+      store.completeStep(2);
+
+      // maxCompletedStep should still be 3
+      expect(useWorkflowStore.getState().maxCompletedStep).toBe(3);
+      // All originally completed steps should still be accessible
+      expect(useWorkflowStore.getState().canNavigateTo(3)).toBe(true);
+    });
+
+    it("should correctly report navigation availability at each step", () => {
+      const store = useWorkflowStore.getState();
+
+      // At step 1, can only go to step 1
+      expect(useWorkflowStore.getState().canNavigateTo(1)).toBe(true);
+      expect(useWorkflowStore.getState().canNavigateTo(2)).toBe(false);
+
+      // Complete step 1
+      store.completeStep(1);
+      expect(useWorkflowStore.getState().canNavigateTo(1)).toBe(true);
+      expect(useWorkflowStore.getState().canNavigateTo(2)).toBe(true);
+      expect(useWorkflowStore.getState().canNavigateTo(3)).toBe(false);
+
+      // Complete steps 2-4
+      store.completeStep(2);
+      store.completeStep(3);
+      store.completeStep(4);
+
+      // Can navigate to steps 1-5
+      expect(useWorkflowStore.getState().canNavigateTo(1)).toBe(true);
+      expect(useWorkflowStore.getState().canNavigateTo(5)).toBe(true);
+      expect(useWorkflowStore.getState().canNavigateTo(6)).toBe(false);
+    });
+  });
 });

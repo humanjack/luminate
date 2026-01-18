@@ -12,6 +12,7 @@ import { StepNavigation } from "@/components/workflow/step-navigation";
 import { useProjectStore } from "@/stores/project-store";
 import { useSettingsStore } from "@/stores/settings-store";
 import { cn } from "@/lib/utils";
+import { debug } from "@/lib/debug";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -133,7 +134,13 @@ export default function AnalysisPage({ params }: PageProps) {
 
   const handleSaveAndNext = async () => {
     // Analysis results are saved as they're generated
-    return analyses.length > 0;
+    debug.log("workflow", `handleSaveAndNext: ${analyses.length} analyses available`);
+    if (analyses.length === 0) {
+      debug.warn("workflow", "handleSaveAndNext: no analyses available");
+      return false;
+    }
+    debug.log("workflow", "handleSaveAndNext: proceeding to video");
+    return true;
   };
 
   const getScoreColor = (score: number) => {

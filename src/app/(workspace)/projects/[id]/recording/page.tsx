@@ -13,6 +13,7 @@ import { useProjectStore } from "@/stores/project-store";
 import { useSettingsStore } from "@/stores/settings-store";
 import { formatDuration } from "@/lib/utils";
 import { cn } from "@/lib/utils";
+import { debug } from "@/lib/debug";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -211,30 +212,41 @@ export default function RecordingPage({ params }: PageProps) {
 
   const handleSaveAndNext = async () => {
     const completedRecordings = recordings.filter((r) => r.audioBlob);
-    if (completedRecordings.length === 0) return false;
-
-    // Save each recording
-    for (const recording of completedRecordings) {
-      if (recording.audioBlob) {
-        const reader = new FileReader();
-        const audioData = await new Promise<string>((resolve) => {
-          reader.onloadend = () => {
-            const base64 = (reader.result as string).split(",")[1];
-            resolve(base64);
-          };
-          reader.readAsDataURL(recording.audioBlob!);
-        });
-
-        await saveRecording(id, {
-          slideIndex: recording.slideIndex,
-          slideId: currentProject?.scripts?.[recording.slideIndex]?.slideId || undefined,
-          audioPath: "", // Will be set by the server
-          duration: recording.duration,
-        });
-      }
+    if (completedRecordings.length === 0) {
+      debug.warn("workflow", "handleSaveAndNext: no recordings to save");
+      return false;
     }
 
-    return true;
+    debug.log("workflow", `handleSaveAndNext: saving ${completedRecordings.length} recordings...`);
+
+    try {
+      // Save each recording
+      for (const recording of completedRecordings) {
+        if (recording.audioBlob) {
+          const reader = new FileReader();
+          const audioData = await new Promise<string>((resolve) => {
+            reader.onloadend = () => {
+              const base64 = (reader.result as string).split(",")[1];
+              resolve(base64);
+            };
+            reader.readAsDataURL(recording.audioBlob!);
+          });
+
+          await saveRecording(id, {
+            slideIndex: recording.slideIndex,
+            slideId: currentProject?.scripts?.[recording.slideIndex]?.slideId || undefined,
+            audioPath: "", // Will be set by the server
+            duration: recording.duration,
+          });
+        }
+      }
+
+      debug.log("workflow", "handleSaveAndNext: recordings saved successfully");
+      return true;
+    } catch (error) {
+      debug.error("workflow", `handleSaveAndNext failed: ${(error as Error).message}`);
+      return false;
+    }
   };
 
   const completedRecordings = recordings.filter((r) => r.audioBlob).length;

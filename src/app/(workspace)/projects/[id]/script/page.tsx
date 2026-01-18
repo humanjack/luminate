@@ -15,6 +15,7 @@ import { useLLM } from "@/hooks/useLLM";
 import { estimateReadingTime, formatDuration } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { SCRIPT_SYSTEM_PROMPT, getScriptPrompt } from "@/lib/llm/prompts";
+import { debug } from "@/lib/debug";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -87,6 +88,7 @@ export default function ScriptPage({ params }: PageProps) {
   const handleGenerateScript = async (index: number) => {
     if (!currentProject?.slides?.[index]) return;
 
+    debug.llmEvent("start", `script for slide ${index + 1}`);
     setIsGenerating(true);
     setGeneratingIndex(index);
     setLlmError("");
@@ -101,8 +103,10 @@ export default function ScriptPage({ params }: PageProps) {
 
     const generator = streamScript(slideContent, index);
     let fullText = "";
+    let hasError = false;
 
     setLlmStatus("streaming");
+    debug.llmEvent("streaming", "receiving chunks");
 
     for await (const message of generator) {
       if (message.type === "text") {
@@ -116,17 +120,34 @@ export default function ScriptPage({ params }: PageProps) {
           )
         );
       } else if (message.type === "error") {
+        debug.llmEvent("error", message.content);
         console.error("Script generation error:", message.content);
         setLlmError(message.content);
         setLlmStatus("error");
+        hasError = true;
         break;
       } else if (message.type === "done") {
+        debug.llmEvent("complete", `${fullText.length} chars generated for slide ${index + 1}`);
         setLlmStatus("complete");
       }
     }
 
-    if (llmStatus !== "error") {
+    if (!hasError) {
       setLlmStatus("complete");
+      // Auto-save the updated scripts after generation completes
+      debug.log("workflow", `Script generation complete for slide ${index + 1}, auto-saving...`);
+      try {
+        // Get the updated scripts including the newly generated one
+        const updatedScripts = scripts.map((script, i) =>
+          i === index
+            ? { ...script, text: fullText, estimatedDuration: estimateReadingTime(fullText) }
+            : script
+        );
+        await saveScripts(id, updatedScripts);
+        debug.log("workflow", "Auto-save complete");
+      } catch (error) {
+        debug.error("workflow", `Auto-save failed: ${(error as Error).message}`);
+      }
     }
     setIsGenerating(false);
     setGeneratingIndex(null);
@@ -156,10 +177,21 @@ export default function ScriptPage({ params }: PageProps) {
 
   const handleSaveAndNext = async () => {
     const validScripts = scripts.filter((s) => s.text.trim());
-    if (validScripts.length === 0) return false;
+    if (validScripts.length === 0) {
+      debug.warn("workflow", "handleSaveAndNext: no scripts to save");
+      return false;
+    }
 
-    await saveScripts(id, scripts);
-    return true;
+    debug.log("workflow", `handleSaveAndNext: saving ${validScripts.length} scripts...`);
+
+    try {
+      await saveScripts(id, scripts);
+      debug.log("workflow", "handleSaveAndNext: scripts saved successfully");
+      return true;
+    } catch (error) {
+      debug.error("workflow", `handleSaveAndNext failed: ${(error as Error).message}`);
+      return false;
+    }
   };
 
   const totalDuration = scripts.reduce((sum, s) => sum + s.estimatedDuration, 0);

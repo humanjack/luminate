@@ -195,4 +195,48 @@ describe("Projects API", () => {
       expect(insertedValues.updatedAt).toBeInstanceOf(Date);
     });
   });
+
+  describe("workflow data saving scenarios", () => {
+    it("should handle sequential saves for workflow progression", async () => {
+      // This test verifies the API would handle saving workflow data correctly
+      // In actual implementation, each step would call its respective endpoint
+
+      const mockProject = {
+        id: "workflow-test-id",
+        name: "Workflow Test",
+        currentStep: 1,
+        status: "draft",
+      };
+
+      (db.insert as ReturnType<typeof vi.fn>).mockReturnValue({
+        values: vi.fn().mockReturnValue({
+          returning: vi.fn().mockResolvedValue([mockProject]),
+        }),
+      });
+
+      // Create project
+      const createRequest = createMockRequest("POST", { name: "Workflow Test" });
+      const createResponse = await POST(createRequest);
+      expect(createResponse.status).toBe(201);
+
+      // Verify project can be created for workflow
+      const data = await createResponse.json();
+      expect(data.currentStep).toBe(1);
+    });
+
+    it("should validate project name for workflow creation", async () => {
+      // Test that workflow projects require valid names
+      const invalidRequests = [
+        { name: "" },
+        { name: "   " },
+        {},
+      ];
+
+      for (const body of invalidRequests) {
+        const request = createMockRequest("POST", body);
+        const response = await POST(request);
+        expect(response.status).toBe(400);
+      }
+    });
+  });
 });

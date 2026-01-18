@@ -24,6 +24,7 @@ import { useSettingsStore } from "@/stores/settings-store";
 import { useLLM } from "@/hooks/useLLM";
 import { cn } from "@/lib/utils";
 import { CONTENT_SYSTEM_PROMPT, getContentPrompt } from "@/lib/llm/prompts";
+import { debug } from "@/lib/debug";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -61,6 +62,7 @@ export default function ContentPage({ params }: PageProps) {
   const handleGenerate = async () => {
     if (!currentProject?.researchData?.content) return;
 
+    debug.llmEvent("start", `content generation for format: ${format}`);
     setIsGenerating(true);
     setMarkdown("");
     setLlmError("");
@@ -77,8 +79,10 @@ export default function ContentPage({ params }: PageProps) {
       targetLength
     );
     let fullContent = "";
+    let hasError = false;
 
     setLlmStatus("streaming");
+    debug.llmEvent("streaming", "receiving chunks");
 
     for await (const message of generator) {
       if (message.type === "text") {
@@ -86,45 +90,84 @@ export default function ContentPage({ params }: PageProps) {
         setMarkdown(fullContent);
         setStreamingOutput(fullContent);
       } else if (message.type === "error") {
+        debug.llmEvent("error", message.content);
         setMarkdown(`Error: ${message.content}`);
         setLlmError(message.content);
         setLlmStatus("error");
+        hasError = true;
         break;
       } else if (message.type === "done") {
+        debug.llmEvent("complete", `${fullContent.length} chars generated`);
         setLlmStatus("complete");
       }
     }
 
-    if (llmStatus !== "error") {
+    if (!hasError) {
       setLlmStatus("complete");
+      // Auto-save when generation completes
+      debug.log("workflow", "LLM generation complete, auto-saving content...");
+      try {
+        // Parse outline from markdown for saving
+        const sections = fullContent.split("---").filter((s) => s.trim());
+        const outline = sections.map((section) => {
+          const lines = section.trim().split("\n");
+          const titleLine = lines.find((l) => l.startsWith("#")) || "";
+          const sectionTitle = titleLine.replace(/^#+\s*/, "").trim();
+          const points = lines
+            .filter((l) => l.startsWith("-") || l.startsWith("*"))
+            .map((l) => l.replace(/^[-*]\s*/, "").trim());
+          return { title: sectionTitle, points };
+        });
+
+        await saveContentData(id, {
+          title,
+          format,
+          targetLength,
+          outline,
+          markdown: fullContent,
+        });
+        debug.log("workflow", "Auto-save complete");
+      } catch (error) {
+        debug.error("workflow", `Auto-save failed: ${(error as Error).message}`);
+      }
     }
     setIsGenerating(false);
   };
 
   const handleSaveAndNext = async () => {
-    if (!markdown.trim()) return false;
+    if (!markdown.trim()) {
+      debug.warn("workflow", "handleSaveAndNext: no markdown content");
+      return false;
+    }
+
+    debug.log("workflow", "handleSaveAndNext: saving content data...");
 
     // Parse outline from markdown
     const sections = markdown.split("---").filter((s) => s.trim());
     const outline = sections.map((section) => {
       const lines = section.trim().split("\n");
       const titleLine = lines.find((l) => l.startsWith("#")) || "";
-      const title = titleLine.replace(/^#+\s*/, "").trim();
+      const sectionTitle = titleLine.replace(/^#+\s*/, "").trim();
       const points = lines
         .filter((l) => l.startsWith("-") || l.startsWith("*"))
         .map((l) => l.replace(/^[-*]\s*/, "").trim());
-      return { title, points };
+      return { title: sectionTitle, points };
     });
 
-    await saveContentData(id, {
-      title,
-      format,
-      targetLength,
-      outline,
-      markdown,
-    });
-
-    return true;
+    try {
+      await saveContentData(id, {
+        title,
+        format,
+        targetLength,
+        outline,
+        markdown,
+      });
+      debug.log("workflow", "handleSaveAndNext: content saved successfully");
+      return true;
+    } catch (error) {
+      debug.error("workflow", `handleSaveAndNext failed: ${(error as Error).message}`);
+      return false;
+    }
   };
 
   const isValid = hasValidLLMConfig();
