@@ -1,20 +1,13 @@
 import { NextRequest } from "next/server";
-import { db, settings } from "@/lib/db";
-import * as anthropicClient from "@/lib/llm/anthropic-client";
-import * as claudeCli from "@/lib/llm/claude-cli";
-import { isClaudeCLIAvailable } from "@/lib/llm/claude-cli";
 
 export const runtime = "nodejs";
 
-async function getSettings() {
-  const allSettings = await db.select().from(settings);
-  const settingsMap: Record<string, string> = {};
-  for (const s of allSettings) {
-    settingsMap[s.key] = s.value || "";
-  }
-  return settingsMap;
-}
+const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8000";
 
+/**
+ * Proxy research requests to the FastAPI backend
+ * The backend handles all LLM provider logic via LangChain
+ */
 export async function POST(request: NextRequest) {
   const body = await request.json();
   const { topic, depth } = body;
@@ -26,63 +19,62 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  const settingsData = await getSettings();
-  const provider = settingsData.llmProvider || "anthropic";
+  console.log(`[LLM Research] Proxying to backend: ${BACKEND_URL}/api/llm/research`);
 
-  const encoder = new TextEncoder();
-  const stream = new ReadableStream({
-    async start(controller) {
-      try {
-        let generator: AsyncGenerator<{ type: string; content: string }>;
+  try {
+    // Forward request to FastAPI backend
+    const backendResponse = await fetch(`${BACKEND_URL}/api/llm/research`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ topic, depth }),
+    });
 
-        if (provider === "anthropic") {
-          const apiKey = settingsData.anthropicApiKey;
-          const model = settingsData.claudeModel || "claude-sonnet-4-5-20250514";
+    if (!backendResponse.ok) {
+      const error = await backendResponse.text();
+      console.error(`[LLM Research] Backend error:`, error);
+      return new Response(
+        JSON.stringify({ error: `Backend error: ${backendResponse.status}` }),
+        { status: backendResponse.status, headers: { "Content-Type": "application/json" } }
+      );
+    }
 
-          if (!apiKey) {
-            controller.enqueue(
-              encoder.encode(`data: ${JSON.stringify({ type: "error", content: "Anthropic API key not configured" })}\n\n`)
-            );
-            controller.close();
-            return;
+    // Stream the response from backend to client
+    const reader = backendResponse.body?.getReader();
+    if (!reader) {
+      return new Response(JSON.stringify({ error: "No response body from backend" }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    const stream = new ReadableStream({
+      async start(controller) {
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            controller.enqueue(value);
           }
-
-          generator = anthropicClient.streamResearch(apiKey, model, topic, depth);
-        } else {
-          // Check if Claude CLI is available before starting
-          const cliCheck = isClaudeCLIAvailable();
-          if (!cliCheck.available) {
-            controller.enqueue(
-              encoder.encode(`data: ${JSON.stringify({ type: "error", content: cliCheck.error })}\n\n`)
-            );
-            controller.close();
-            return;
-          }
-          generator = claudeCli.streamResearch(topic, depth);
+          controller.close();
+        } catch (error) {
+          console.error(`[LLM Research] Stream error:`, error);
+          controller.error(error);
         }
+      },
+    });
 
-        for await (const message of generator) {
-          controller.enqueue(
-            encoder.encode(`data: ${JSON.stringify(message)}\n\n`)
-          );
-        }
-
-        controller.enqueue(encoder.encode("data: [DONE]\n\n"));
-        controller.close();
-      } catch (error) {
-        controller.enqueue(
-          encoder.encode(`data: ${JSON.stringify({ type: "error", content: (error as Error).message })}\n\n`)
-        );
-        controller.close();
-      }
-    },
-  });
-
-  return new Response(stream, {
-    headers: {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
-      Connection: "keep-alive",
-    },
-  });
+    return new Response(stream, {
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive",
+      },
+    });
+  } catch (error) {
+    console.error(`[LLM Research] Proxy error:`, error);
+    return new Response(
+      JSON.stringify({ error: `Failed to connect to backend: ${(error as Error).message}` }),
+      { status: 502, headers: { "Content-Type": "application/json" } }
+    );
+  }
 }

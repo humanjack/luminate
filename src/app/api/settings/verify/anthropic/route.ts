@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import Anthropic from "@anthropic-ai/sdk";
+
+const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8000";
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,32 +14,26 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const client = new Anthropic({ apiKey });
-
-    // Make a minimal API call to verify the key works
-    const response = await client.messages.create({
-      model: "claude-3-5-haiku-20241022",
-      max_tokens: 10,
-      messages: [{ role: "user", content: "Hi" }],
+    // First, save the API key to backend
+    await fetch(`${BACKEND_URL}/api/settings`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ anthropicApiKey: apiKey }),
     });
 
-    return NextResponse.json({
-      valid: true,
-      message: "API key is valid",
-      model: response.model,
+    // Then verify via backend
+    const response = await fetch(`${BACKEND_URL}/api/settings/verify/anthropic`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
     });
+
+    const result = await response.json();
+    return NextResponse.json(result);
   } catch (error: any) {
-    const errorMessage = error?.message || "Unknown error";
-    const isAuthError = errorMessage.includes("401") ||
-                        errorMessage.includes("authentication") ||
-                        errorMessage.includes("invalid") ||
-                        errorMessage.includes("API key");
-
+    console.error("[Verify Anthropic] Error:", error);
     return NextResponse.json({
       valid: false,
-      error: isAuthError
-        ? "Invalid API key. Please check your Anthropic API key."
-        : `Connection failed: ${errorMessage}`,
+      error: `Connection failed: ${error?.message || "Unknown error"}`,
     });
   }
 }

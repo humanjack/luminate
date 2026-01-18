@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
+const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8000";
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -12,32 +14,23 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Verify by listing models
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`,
-      { method: "GET" }
-    );
+    // First, save the API key to backend
+    await fetch(`${BACKEND_URL}/api/settings`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ googleApiKey: apiKey }),
+    });
 
-    if (response.ok) {
-      const data = await response.json();
-      const modelCount = data.models?.length || 0;
-      return NextResponse.json({
-        valid: true,
-        message: `API key is valid (${modelCount} models available)`,
-      });
-    } else if (response.status === 400 || response.status === 401) {
-      const data = await response.json();
-      return NextResponse.json({
-        valid: false,
-        error: data.error?.message || "Invalid API key",
-      });
-    } else {
-      return NextResponse.json({
-        valid: false,
-        error: `API error: ${response.status}`,
-      });
-    }
+    // Then verify via backend
+    const response = await fetch(`${BACKEND_URL}/api/settings/verify/google`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    });
+
+    const result = await response.json();
+    return NextResponse.json(result);
   } catch (error: any) {
+    console.error("[Verify Google] Error:", error);
     return NextResponse.json({
       valid: false,
       error: `Connection failed: ${error?.message || "Unknown error"}`,
