@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-export type LLMProvider = "anthropic" | "claude-cli";
+export type LLMProvider = "anthropic" | "openai" | "google" | "claude-cli";
 export type SpeechProvider = "speechsuper" | "elsa";
 
 interface SettingsState {
@@ -9,6 +9,10 @@ interface SettingsState {
   llmProvider: LLMProvider;
   anthropicApiKey: string;
   claudeModel: string;
+  openaiApiKey: string;
+  openaiModel: string;
+  googleApiKey: string;
+  googleModel: string;
 
   // Speech Analysis Settings
   speechProvider: SpeechProvider;
@@ -39,6 +43,10 @@ interface SettingsState {
   setLLMProvider: (provider: LLMProvider) => void;
   setAnthropicApiKey: (key: string) => void;
   setClaudeModel: (model: string) => void;
+  setOpenAIApiKey: (key: string) => void;
+  setOpenAIModel: (model: string) => void;
+  setGoogleApiKey: (key: string) => void;
+  setGoogleModel: (model: string) => void;
   setSpeechProvider: (provider: SpeechProvider) => void;
   setSpeechSuperCredentials: (apiKey: string, appId: string) => void;
   setElsaApiKey: (key: string) => void;
@@ -60,6 +68,10 @@ export const useSettingsStore = create<SettingsState>()(
       llmProvider: "anthropic",
       anthropicApiKey: "",
       claudeModel: "claude-sonnet-4-5-20250514",
+      openaiApiKey: "",
+      openaiModel: "gpt-4.1",
+      googleApiKey: "",
+      googleModel: "gemini-2.5-flash",
 
       // Speech Analysis Settings
       speechProvider: "speechsuper",
@@ -92,6 +104,14 @@ export const useSettingsStore = create<SettingsState>()(
       setAnthropicApiKey: (key) => set({ anthropicApiKey: key }),
 
       setClaudeModel: (model) => set({ claudeModel: model }),
+
+      setOpenAIApiKey: (key) => set({ openaiApiKey: key }),
+
+      setOpenAIModel: (model) => set({ openaiModel: model }),
+
+      setGoogleApiKey: (key) => set({ googleApiKey: key }),
+
+      setGoogleModel: (model) => set({ googleModel: model }),
 
       setSpeechProvider: (provider) => set({ speechProvider: provider }),
 
@@ -140,6 +160,10 @@ export const useSettingsStore = create<SettingsState>()(
               llmProvider: state.llmProvider,
               anthropicApiKey: state.anthropicApiKey,
               claudeModel: state.claudeModel,
+              openaiApiKey: state.openaiApiKey,
+              openaiModel: state.openaiModel,
+              googleApiKey: state.googleApiKey,
+              googleModel: state.googleModel,
               speechProvider: state.speechProvider,
               speechSuperApiKey: state.speechSuperApiKey,
               speechSuperAppId: state.speechSuperAppId,
@@ -165,6 +189,12 @@ export const useSettingsStore = create<SettingsState>()(
         if (state.llmProvider === "anthropic") {
           return state.anthropicApiKey.length > 0;
         }
+        if (state.llmProvider === "openai") {
+          return state.openaiApiKey.length > 0;
+        }
+        if (state.llmProvider === "google") {
+          return state.googleApiKey.length > 0;
+        }
         // Claude CLI doesn't need API key
         return true;
       },
@@ -183,6 +213,10 @@ export const useSettingsStore = create<SettingsState>()(
         llmProvider: state.llmProvider,
         anthropicApiKey: state.anthropicApiKey,
         claudeModel: state.claudeModel,
+        openaiApiKey: state.openaiApiKey,
+        openaiModel: state.openaiModel,
+        googleApiKey: state.googleApiKey,
+        googleModel: state.googleModel,
         speechProvider: state.speechProvider,
         speechSuperApiKey: state.speechSuperApiKey,
         speechSuperAppId: state.speechSuperAppId,

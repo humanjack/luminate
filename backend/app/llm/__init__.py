@@ -7,6 +7,7 @@ from app.llm.prompts import (
     get_script_prompt,
 )
 from app.llm.anthropic_client import AnthropicLLM
+from app.llm.llm_client import UnifiedLLMClient, get_llm_client, DEFAULT_MODELS
 
 __all__ = [
     "RESEARCH_SYSTEM_PROMPT",
@@ -16,4 +17,7 @@ __all__ = [
     "get_content_prompt",
     "get_script_prompt",
     "AnthropicLLM",
+    "UnifiedLLMClient",
+    "get_llm_client",
+    "DEFAULT_MODELS",
 ]

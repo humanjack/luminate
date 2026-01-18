@@ -1,15 +1,14 @@
-"""LLM streaming API routes."""
+"""LLM streaming API routes with multi-provider support."""
 
 import json
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
-from typing import Optional
 
 from app.core.database import get_db
 from app.models import Setting
-from app.llm.anthropic_client import AnthropicLLM
+from app.llm.llm_client import get_llm_client, DEFAULT_MODELS
 
 router = APIRouter()
 
@@ -36,33 +35,43 @@ def get_settings_dict(db: Session) -> dict:
     return {s.key: s.value for s in settings}
 
 
-async def stream_generator(llm: AnthropicLLM, stream_func):
-    """Generic async generator for streaming LLM responses."""
-    async for message in stream_func:
-        yield f"data: {json.dumps(message)}\n\n"
-    yield "data: [DONE]\n\n"
+def get_provider_config(settings: dict) -> tuple[str, str, str]:
+    """Extract provider, API key, and model from settings.
+
+    Returns:
+        Tuple of (provider, api_key, model)
+    """
+    provider = settings.get("llmProvider", "anthropic")
+
+    # Map provider to API key setting name
+    api_key_map = {
+        "anthropic": "anthropicApiKey",
+        "openai": "openaiApiKey",
+        "google": "googleApiKey",
+    }
+
+    # Map provider to model setting name
+    model_map = {
+        "anthropic": "claudeModel",
+        "openai": "openaiModel",
+        "google": "googleModel",
+    }
+
+    api_key = settings.get(api_key_map.get(provider, ""), "")
+    model = settings.get(model_map.get(provider, ""), "") or DEFAULT_MODELS.get(provider, "")
+
+    return provider, api_key, model
 
 
 @router.post("/research")
 async def stream_research(request: ResearchRequest, db: Session = Depends(get_db)):
     """Stream research generation via SSE."""
     settings = get_settings_dict(db)
-    provider = settings.get("llmProvider", "anthropic")
-
-    if provider != "anthropic":
-        # For now, only support Anthropic API in Python backend
-        # Claude CLI support would need subprocess handling
-        raise HTTPException(
-            status_code=400,
-            detail="Only Anthropic API provider is supported in Python backend"
-        )
-
-    api_key = settings.get("anthropicApiKey")
-    model = settings.get("claudeModel", "claude-sonnet-4-5-20250514")
+    provider, api_key, model = get_provider_config(settings)
 
     if not api_key:
         async def error_stream():
-            yield f"data: {json.dumps({'type': 'error', 'content': 'Anthropic API key not configured'})}\n\n"
+            yield f"data: {json.dumps({'type': 'error', 'content': f'{provider.title()} API key not configured'})}\n\n"
         return StreamingResponse(
             error_stream(),
             media_type="text/event-stream",
@@ -72,7 +81,7 @@ async def stream_research(request: ResearchRequest, db: Session = Depends(get_db
             }
         )
 
-    llm = AnthropicLLM(api_key=api_key, model=model)
+    llm = get_llm_client(provider=provider, api_key=api_key, model=model)
 
     async def generate():
         try:
@@ -96,20 +105,11 @@ async def stream_research(request: ResearchRequest, db: Session = Depends(get_db
 async def stream_content(request: ContentRequest, db: Session = Depends(get_db)):
     """Stream content/slide generation via SSE."""
     settings = get_settings_dict(db)
-    provider = settings.get("llmProvider", "anthropic")
-
-    if provider != "anthropic":
-        raise HTTPException(
-            status_code=400,
-            detail="Only Anthropic API provider is supported in Python backend"
-        )
-
-    api_key = settings.get("anthropicApiKey")
-    model = settings.get("claudeModel", "claude-sonnet-4-5-20250514")
+    provider, api_key, model = get_provider_config(settings)
 
     if not api_key:
         async def error_stream():
-            yield f"data: {json.dumps({'type': 'error', 'content': 'Anthropic API key not configured'})}\n\n"
+            yield f"data: {json.dumps({'type': 'error', 'content': f'{provider.title()} API key not configured'})}\n\n"
         return StreamingResponse(
             error_stream(),
             media_type="text/event-stream",
@@ -119,7 +119,7 @@ async def stream_content(request: ContentRequest, db: Session = Depends(get_db))
             }
         )
 
-    llm = AnthropicLLM(api_key=api_key, model=model)
+    llm = get_llm_client(provider=provider, api_key=api_key, model=model)
 
     async def generate():
         try:
@@ -145,20 +145,11 @@ async def stream_content(request: ContentRequest, db: Session = Depends(get_db))
 async def stream_script(request: ScriptRequest, db: Session = Depends(get_db)):
     """Stream script generation via SSE."""
     settings = get_settings_dict(db)
-    provider = settings.get("llmProvider", "anthropic")
-
-    if provider != "anthropic":
-        raise HTTPException(
-            status_code=400,
-            detail="Only Anthropic API provider is supported in Python backend"
-        )
-
-    api_key = settings.get("anthropicApiKey")
-    model = settings.get("claudeModel", "claude-sonnet-4-5-20250514")
+    provider, api_key, model = get_provider_config(settings)
 
     if not api_key:
         async def error_stream():
-            yield f"data: {json.dumps({'type': 'error', 'content': 'Anthropic API key not configured'})}\n\n"
+            yield f"data: {json.dumps({'type': 'error', 'content': f'{provider.title()} API key not configured'})}\n\n"
         return StreamingResponse(
             error_stream(),
             media_type="text/event-stream",
@@ -168,7 +159,7 @@ async def stream_script(request: ScriptRequest, db: Session = Depends(get_db)):
             }
         )
 
-    llm = AnthropicLLM(api_key=api_key, model=model)
+    llm = get_llm_client(provider=provider, api_key=api_key, model=model)
 
     async def generate():
         try:

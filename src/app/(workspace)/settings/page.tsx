@@ -35,6 +35,10 @@ export default function SettingsPage() {
     llmProvider,
     anthropicApiKey,
     claudeModel,
+    openaiApiKey,
+    openaiModel,
+    googleApiKey,
+    googleModel,
     speechProvider,
     speechSuperApiKey,
     speechSuperAppId,
@@ -51,6 +55,10 @@ export default function SettingsPage() {
     setLLMProvider,
     setAnthropicApiKey,
     setClaudeModel,
+    setOpenAIApiKey,
+    setOpenAIModel,
+    setGoogleApiKey,
+    setGoogleModel,
     setSpeechProvider,
     setSpeechSuperCredentials,
     setElsaApiKey,
@@ -64,6 +72,8 @@ export default function SettingsPage() {
 
   // Verification states
   const [anthropicVerification, setAnthropicVerification] = useState<VerificationResult>({ status: "idle" });
+  const [openaiVerification, setOpenaiVerification] = useState<VerificationResult>({ status: "idle" });
+  const [googleVerification, setGoogleVerification] = useState<VerificationResult>({ status: "idle" });
   const [claudeCliVerification, setClaudeCliVerification] = useState<VerificationResult>({ status: "idle" });
   const [speechSuperVerification, setSpeechSuperVerification] = useState<VerificationResult>({ status: "idle" });
   const [elsaVerification, setElsaVerification] = useState<VerificationResult>({ status: "idle" });
@@ -112,6 +122,80 @@ export default function SettingsPage() {
       }
     } catch (error) {
       setAnthropicVerification({
+        status: "invalid",
+        message: "Failed to verify API key",
+      });
+    }
+  };
+
+  const verifyOpenAI = async () => {
+    if (!openaiApiKey) {
+      setOpenaiVerification({ status: "invalid", message: "Please enter an API key first" });
+      return;
+    }
+
+    setOpenaiVerification({ status: "verifying" });
+
+    try {
+      const response = await fetch("/api/settings/verify/openai", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ apiKey: openaiApiKey }),
+      });
+
+      const result = await response.json();
+
+      if (result.valid) {
+        setOpenaiVerification({
+          status: "valid",
+          message: result.message || "API key is valid",
+        });
+        toast({ title: "Verified", description: "OpenAI API key is valid!" });
+      } else {
+        setOpenaiVerification({
+          status: "invalid",
+          message: result.error || "Invalid API key",
+        });
+      }
+    } catch (error) {
+      setOpenaiVerification({
+        status: "invalid",
+        message: "Failed to verify API key",
+      });
+    }
+  };
+
+  const verifyGoogle = async () => {
+    if (!googleApiKey) {
+      setGoogleVerification({ status: "invalid", message: "Please enter an API key first" });
+      return;
+    }
+
+    setGoogleVerification({ status: "verifying" });
+
+    try {
+      const response = await fetch("/api/settings/verify/google", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ apiKey: googleApiKey }),
+      });
+
+      const result = await response.json();
+
+      if (result.valid) {
+        setGoogleVerification({
+          status: "valid",
+          message: result.message || "API key is valid",
+        });
+        toast({ title: "Verified", description: "Google API key is valid!" });
+      } else {
+        setGoogleVerification({
+          status: "invalid",
+          message: result.error || "Invalid API key",
+        });
+      }
+    } catch (error) {
+      setGoogleVerification({
         status: "invalid",
         message: "Failed to verify API key",
       });
@@ -307,6 +391,8 @@ export default function SettingsPage() {
                       setLLMProvider(v as any);
                       // Reset verification when provider changes
                       setAnthropicVerification({ status: "idle" });
+                      setOpenaiVerification({ status: "idle" });
+                      setGoogleVerification({ status: "idle" });
                       setClaudeCliVerification({ status: "idle" });
                     }}
                   >
@@ -315,13 +401,16 @@ export default function SettingsPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="anthropic">Anthropic API</SelectItem>
+                      <SelectItem value="openai">OpenAI API</SelectItem>
+                      <SelectItem value="google">Google API</SelectItem>
                       <SelectItem value="claude-cli">Claude Code CLI</SelectItem>
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">
-                    {llmProvider === "anthropic"
-                      ? "Use the Anthropic API directly with your API key."
-                      : "Use the Claude Code CLI (must be installed and configured)."}
+                    {llmProvider === "anthropic" && "Use the Anthropic API directly with your API key."}
+                    {llmProvider === "openai" && "Use the OpenAI API with your API key."}
+                    {llmProvider === "google" && "Use the Google Gemini API with your API key."}
+                    {llmProvider === "claude-cli" && "Use the Claude Code CLI (must be installed and configured)."}
                   </p>
                 </div>
 
@@ -373,9 +462,127 @@ export default function SettingsPage() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
+                          <SelectItem value="claude-opus-4-5-20251101">Claude Opus 4.5</SelectItem>
                           <SelectItem value="claude-sonnet-4-5-20250514">Claude Sonnet 4.5</SelectItem>
-                          <SelectItem value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet</SelectItem>
-                          <SelectItem value="claude-3-5-haiku-20241022">Claude 3.5 Haiku</SelectItem>
+                          <SelectItem value="claude-haiku-4-5-20251101">Claude Haiku 4.5</SelectItem>
+                          <SelectItem value="claude-3-7-sonnet-20250224">Claude 3.7 Sonnet</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </>
+                ) : llmProvider === "openai" ? (
+                  <>
+                    <div className="space-y-2">
+                      <Label>OpenAI API Key</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          type="password"
+                          placeholder="sk-..."
+                          value={openaiApiKey}
+                          onChange={(e) => {
+                            setOpenAIApiKey(e.target.value);
+                            setOpenaiVerification({ status: "idle" });
+                          }}
+                          className="flex-1"
+                        />
+                        <Button
+                          variant="outline"
+                          onClick={verifyOpenAI}
+                          disabled={openaiVerification.status === "verifying"}
+                        >
+                          {openaiVerification.status === "verifying" ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            "Verify"
+                          )}
+                        </Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Get your API key from{" "}
+                        <a
+                          href="https://platform.openai.com/api-keys"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline"
+                        >
+                          platform.openai.com
+                        </a>
+                      </p>
+                      <VerificationBadge result={openaiVerification} />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Model</Label>
+                      <Select value={openaiModel} onValueChange={setOpenAIModel}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="gpt-5.2">GPT-5.2</SelectItem>
+                          <SelectItem value="gpt-4.1">GPT-4.1</SelectItem>
+                          <SelectItem value="gpt-4.1-mini">GPT-4.1 Mini</SelectItem>
+                          <SelectItem value="gpt-4.1-nano">GPT-4.1 Nano</SelectItem>
+                          <SelectItem value="o3">O3</SelectItem>
+                          <SelectItem value="o4-mini">O4 Mini</SelectItem>
+                          <SelectItem value="gpt-4o">GPT-4o (Legacy)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </>
+                ) : llmProvider === "google" ? (
+                  <>
+                    <div className="space-y-2">
+                      <Label>Google API Key</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          type="password"
+                          placeholder="AIza..."
+                          value={googleApiKey}
+                          onChange={(e) => {
+                            setGoogleApiKey(e.target.value);
+                            setGoogleVerification({ status: "idle" });
+                          }}
+                          className="flex-1"
+                        />
+                        <Button
+                          variant="outline"
+                          onClick={verifyGoogle}
+                          disabled={googleVerification.status === "verifying"}
+                        >
+                          {googleVerification.status === "verifying" ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            "Verify"
+                          )}
+                        </Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Get your API key from{" "}
+                        <a
+                          href="https://aistudio.google.com/apikey"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline"
+                        >
+                          aistudio.google.com
+                        </a>
+                      </p>
+                      <VerificationBadge result={googleVerification} />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Model</Label>
+                      <Select value={googleModel} onValueChange={setGoogleModel}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="gemini-3-pro-preview">Gemini 3 Pro</SelectItem>
+                          <SelectItem value="gemini-3-flash-preview">Gemini 3 Flash</SelectItem>
+                          <SelectItem value="gemini-2.5-flash">Gemini 2.5 Flash</SelectItem>
+                          <SelectItem value="gemini-2.5-pro">Gemini 2.5 Pro</SelectItem>
+                          <SelectItem value="gemini-2.5-flash-lite">Gemini 2.5 Flash Lite</SelectItem>
+                          <SelectItem value="gemini-2.0-flash">Gemini 2.0 Flash (Legacy)</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>

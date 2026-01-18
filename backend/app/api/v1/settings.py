@@ -121,6 +121,75 @@ async def verify_claude_cli():
         return {"available": False, "error": str(e)}
 
 
+@router.post("/verify/openai")
+async def verify_openai(db: Session = Depends(get_db)):
+    """Verify OpenAI API key."""
+    api_key_setting = db.query(Setting).filter(Setting.key == "openaiApiKey").first()
+
+    if not api_key_setting or not api_key_setting.value:
+        raise HTTPException(status_code=400, detail="OpenAI API key not configured")
+
+    api_key = api_key_setting.value
+
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                "https://api.openai.com/v1/models",
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                },
+                timeout=30.0,
+            )
+
+            if response.status_code == 200:
+                return {"valid": True, "message": "API key is valid"}
+            elif response.status_code == 401:
+                return {"valid": False, "message": "Invalid API key"}
+            else:
+                return {
+                    "valid": False,
+                    "message": f"API error: {response.status_code}",
+                }
+
+    except Exception as e:
+        return {"valid": False, "message": f"Connection error: {str(e)}"}
+
+
+@router.post("/verify/google")
+async def verify_google(db: Session = Depends(get_db)):
+    """Verify Google Gemini API key."""
+    api_key_setting = db.query(Setting).filter(Setting.key == "googleApiKey").first()
+
+    if not api_key_setting or not api_key_setting.value:
+        raise HTTPException(status_code=400, detail="Google API key not configured")
+
+    api_key = api_key_setting.value
+
+    try:
+        async with httpx.AsyncClient() as client:
+            # Test with a simple model list request
+            response = await client.get(
+                f"https://generativelanguage.googleapis.com/v1beta/models?key={api_key}",
+                timeout=30.0,
+            )
+
+            if response.status_code == 200:
+                return {"valid": True, "message": "API key is valid"}
+            elif response.status_code == 400:
+                data = response.json()
+                if "error" in data:
+                    return {"valid": False, "message": data["error"].get("message", "Invalid API key")}
+                return {"valid": False, "message": "Invalid API key"}
+            else:
+                return {
+                    "valid": False,
+                    "message": f"API error: {response.status_code}",
+                }
+
+    except Exception as e:
+        return {"valid": False, "message": f"Connection error: {str(e)}"}
+
+
 @router.post("/verify/speechsuper")
 async def verify_speechsuper(db: Session = Depends(get_db)):
     """Verify SpeechSuper API credentials."""

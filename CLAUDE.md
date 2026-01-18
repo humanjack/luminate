@@ -179,25 +179,31 @@ backend/
 
 ### LLM Integration (LangChain)
 
-The backend uses LangChain's streaming API via `ChatAnthropic.astream()`:
+The backend supports **three LLM providers** through a unified LangChain interface:
+
+- **Anthropic Claude** - Default: `claude-sonnet-4-5-20250514`
+- **OpenAI GPT** - Default: `gpt-4o`
+- **Google Gemini** - Default: `gemini-2.0-flash-exp`
+
+All providers use the same streaming API pattern:
 
 ```python
-from langchain_anthropic import ChatAnthropic
-from langchain_core.messages import HumanMessage, SystemMessage
+from app.llm.llm_client import get_llm_client
 
-# Async generator for streaming responses
-async def stream_research(topic: str, depth: str):
-    client = ChatAnthropic(api_key=api_key, model=model, streaming=True)
-    messages = [SystemMessage(...), HumanMessage(...)]
+# Create client for any provider
+llm = get_llm_client(provider="anthropic", api_key=api_key, model=model)
 
-    async for chunk in client.astream(messages):
-        if chunk.content:
-            yield {"type": "text", "content": chunk.content}
+# Stream responses (same interface for all providers)
+async for chunk in llm.stream_research(topic, depth):
+    if chunk.content:
+        yield {"type": "text", "content": chunk.content}
 
-    yield {"type": "done", "content": ""}
+yield {"type": "done", "content": ""}
 ```
 
 All LLM endpoints (`/api/llm/research`, `/api/llm/content`, `/api/llm/script`) return Server-Sent Events compatible with the frontend's `useLLM()` hook.
+
+See `/backend/LLM_MODELS.md` for a complete list of available models.
 
 ### Database Models
 

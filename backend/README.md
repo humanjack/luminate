@@ -58,6 +58,8 @@ Each project has nested resources:
 - `GET /api/settings` - Get all settings
 - `POST /api/settings` - Save settings
 - `POST /api/settings/verify/anthropic` - Verify Anthropic API key
+- `POST /api/settings/verify/openai` - Verify OpenAI API key
+- `POST /api/settings/verify/google` - Verify Google Gemini API key
 - `POST /api/settings/verify/claude-cli` - Verify Claude CLI
 
 ### Database
@@ -84,11 +86,46 @@ poetry run alembic downgrade -1
 poetry run pytest
 ```
 
+## LLM Provider Support
+
+The backend supports multiple LLM providers through LangChain:
+
+### Anthropic (Claude)
+- **Default Model**: `claude-sonnet-4-5-20250514`
+- **Other Models**: `claude-sonnet-4-20241022`, `claude-opus-4-20241022`, etc.
+- **API Key**: Anthropic Console (https://console.anthropic.com)
+
+### OpenAI (GPT)
+- **Default Model**: `gpt-4o`
+- **Other Models**: `gpt-4-turbo`, `gpt-4`, `gpt-3.5-turbo`, etc.
+- **API Key**: OpenAI Platform (https://platform.openai.com)
+
+### Google (Gemini)
+- **Default Model**: `gemini-2.0-flash-exp`
+- **Other Models**: `gemini-1.5-pro`, `gemini-1.5-flash`, etc.
+- **API Key**: Google AI Studio (https://aistudio.google.com/apikey)
+
+### Configuration
+
+Configure via `/api/settings` endpoint or `.env` file:
+
+```python
+{
+  "llmProvider": "anthropic",  # or "openai" or "google"
+  "anthropicApiKey": "sk-ant-...",
+  "claudeModel": "claude-sonnet-4-5-20250514",
+  "openaiApiKey": "sk-...",
+  "openaiModel": "gpt-4o",
+  "googleApiKey": "AIza...",
+  "googleModel": "gemini-2.0-flash-exp"
+}
+```
+
 ## Architecture
 
 - **FastAPI** - Web framework
 - **SQLAlchemy** - ORM
 - **Alembic** - Database migrations
-- **LangChain** - LLM integration with Anthropic Claude
+- **LangChain** - Unified LLM integration (Anthropic/OpenAI/Google)
 - **Pydantic** - Data validation
 - **SSE-Starlette** - Server-Sent Events for streaming
