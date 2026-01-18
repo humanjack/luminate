@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, use } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Settings, MoreVertical, Trash2, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { WorkflowStepper } from "@/components/workflow/workflow-stepper";
 import { useProjectStore } from "@/stores/project-store";
 import { useWorkflowStore } from "@/stores/workflow-store";
+import { debug } from "@/lib/debug";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,21 +35,25 @@ interface ProjectLayoutProps {
 export default function ProjectLayout({ children, params }: ProjectLayoutProps) {
   const { id } = use(params);
   const router = useRouter();
+  const pathname = usePathname();
   const { currentProject, loadProject, updateProject, deleteProject } = useProjectStore();
   const { setMaxCompletedStep, setCurrentStep } = useWorkflowStore();
   const [isRenameOpen, setIsRenameOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [newName, setNewName] = useState("");
 
+  // Load project on mount and reload on step navigation to ensure fresh data
   useEffect(() => {
+    debug.log("workflow", `Layout: Loading project ${id}, pathname: ${pathname}`);
     loadProject(id).then((project) => {
       if (project) {
+        debug.log("workflow", `Layout: Project loaded - scripts: ${project.scripts?.length || 0}, slides: ${project.slides?.length || 0}`);
         setMaxCompletedStep((project.currentStep - 1) as any);
         setCurrentStep(project.currentStep as any);
         setNewName(project.name);
       }
     });
-  }, [id, loadProject, setMaxCompletedStep, setCurrentStep]);
+  }, [id, pathname, loadProject, setMaxCompletedStep, setCurrentStep]);
 
   const handleRename = async () => {
     if (newName.trim()) {

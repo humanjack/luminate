@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { useState, useEffect, useRef, use } from "react";
 import { Sparkles, Clock, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -36,9 +36,15 @@ export default function ScriptPage({ params }: PageProps) {
   const { streamScript, isStreaming, hasValidConfig } = useLLM();
 
   const [scripts, setScripts] = useState<ScriptData[]>([]);
+  const scriptsRef = useRef<ScriptData[]>([]); // Ref to track current scripts for async operations
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatingIndex, setGeneratingIndex] = useState<number | null>(null);
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    scriptsRef.current = scripts;
+  }, [scripts]);
 
   // LLM Progress tracking
   const [llmStatus, setLlmStatus] = useState<LLMStatus>("idle");
@@ -46,21 +52,28 @@ export default function ScriptPage({ params }: PageProps) {
   const [streamingOutput, setStreamingOutput] = useState<string>("");
   const [llmError, setLlmError] = useState<string>("");
 
-  // Initialize scripts from slides
+  // Initialize scripts from slides or load existing scripts
   useEffect(() => {
+    debug.log("workflow", `Script page: currentProject changed, scripts in store: ${currentProject?.scripts?.length || 0}`);
+
     if (currentProject?.scripts && currentProject.scripts.length > 0) {
-      // Load existing scripts
-      setScripts(
-        currentProject.scripts.map((s) => ({
-          slideIndex: s.slideIndex,
-          slideId: s.slideId || undefined,
-          text: s.text,
-          speakerNotes: s.speakerNotes || undefined,
-          estimatedDuration: s.estimatedDuration || 0,
-        }))
-      );
+      // Load existing scripts from database
+      debug.log("workflow", `Script page: Loading ${currentProject.scripts.length} existing scripts from store`);
+      const loadedScripts = currentProject.scripts.map((s) => ({
+        slideIndex: s.slideIndex,
+        slideId: s.slideId || undefined,
+        text: s.text,
+        speakerNotes: s.speakerNotes || undefined,
+        estimatedDuration: s.estimatedDuration || 0,
+      }));
+      // Log first script text length to verify data is present
+      if (loadedScripts[0]) {
+        debug.log("workflow", `Script page: First script text length: ${loadedScripts[0].text?.length || 0}`);
+      }
+      setScripts(loadedScripts);
     } else if (currentProject?.slides) {
       // Initialize empty scripts for each slide
+      debug.log("workflow", `Script page: No existing scripts, initializing ${currentProject.slides.length} empty scripts from slides`);
       setScripts(
         currentProject.slides.map((slide, index) => ({
           slideIndex: index,
@@ -137,12 +150,14 @@ export default function ScriptPage({ params }: PageProps) {
       // Auto-save the updated scripts after generation completes
       debug.log("workflow", `Script generation complete for slide ${index + 1}, auto-saving...`);
       try {
-        // Get the updated scripts including the newly generated one
-        const updatedScripts = scripts.map((script, i) =>
+        // Use scriptsRef.current to get the latest state (avoids stale closure)
+        const currentScripts = scriptsRef.current;
+        const updatedScripts = currentScripts.map((script, i) =>
           i === index
             ? { ...script, text: fullText, estimatedDuration: estimateReadingTime(fullText) }
             : script
         );
+        debug.log("workflow", `Auto-saving ${updatedScripts.length} scripts, generated text length: ${fullText.length}`);
         await saveScripts(id, updatedScripts);
         debug.log("workflow", "Auto-save complete");
       } catch (error) {
