@@ -152,8 +152,9 @@ export default function ResearchPage({ params }: PageProps) {
   const isValid = hasValidLLMConfig();
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full overflow-hidden">
       <StepContainer
+        className="flex-1 min-h-0"
         title="Research"
         description="Research your topic to gather information for your video"
         icon="🔍"

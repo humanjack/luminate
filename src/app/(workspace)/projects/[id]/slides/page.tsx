@@ -37,6 +37,7 @@ export default function SlidesPage({ params }: PageProps) {
   const [slides, setSlides] = useState<SlideData[]>([]);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [theme, setTheme] = useState("default");
+  const [isSaving, setIsSaving] = useState(false);
 
   // Parse slides from content markdown
   useEffect(() => {
@@ -96,10 +97,12 @@ export default function SlidesPage({ params }: PageProps) {
   const handleSaveAndNext = async () => {
     if (slides.length === 0) {
       debug.warn("workflow", "handleSaveAndNext: no slides to save");
+      alert("No slides to save. Please add content first.");
       return false;
     }
 
     debug.log("workflow", `handleSaveAndNext: saving ${slides.length} slides...`);
+    setIsSaving(true);
 
     try {
       await saveSlides(
@@ -111,9 +114,12 @@ export default function SlidesPage({ params }: PageProps) {
         }))
       );
       debug.log("workflow", "handleSaveAndNext: slides saved successfully");
+      setIsSaving(false);
       return true;
     } catch (error) {
       debug.error("workflow", `handleSaveAndNext failed: ${(error as Error).message}`);
+      alert(`Failed to save slides: ${(error as Error).message}`);
+      setIsSaving(false);
       return false;
     }
   };
@@ -152,8 +158,9 @@ export default function SlidesPage({ params }: PageProps) {
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full overflow-hidden">
       <StepContainer
+        className="flex-1 min-h-0"
         title="Slides"
         description="Edit and preview your presentation slides"
         icon="🎨"
@@ -271,6 +278,7 @@ export default function SlidesPage({ params }: PageProps) {
         currentStep={3}
         onNext={handleSaveAndNext}
         isNextDisabled={slides.length === 0}
+        isNextLoading={isSaving}
         nextLabel="Continue to Script"
       />
     </div>

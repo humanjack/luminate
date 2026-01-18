@@ -204,8 +204,9 @@ export default function ContentPage({ params }: PageProps) {
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full overflow-hidden">
       <StepContainer
+        className="flex-1 min-h-0"
         title="Content"
         description="Generate presentation content from your research"
         icon="📝"

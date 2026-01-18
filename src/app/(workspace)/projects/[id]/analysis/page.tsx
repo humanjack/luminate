@@ -160,8 +160,9 @@ export default function AnalysisPage({ params }: PageProps) {
   const completedAnalyses = analyses.filter(Boolean).length;
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full overflow-hidden">
       <StepContainer
+        className="flex-1 min-h-0"
         title="Analysis"
         description="Analyze pronunciation and get feedback on your recordings"
         icon="📊"

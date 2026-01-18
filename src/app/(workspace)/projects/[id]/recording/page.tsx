@@ -253,8 +253,9 @@ export default function RecordingPage({ params }: PageProps) {
   const totalRecordings = recordings.length;
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full overflow-hidden">
       <StepContainer
+        className="flex-1 min-h-0"
         title="Recording"
         description="Record your video narration using the teleprompter"
         icon="🎙️"

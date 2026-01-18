@@ -198,8 +198,9 @@ export default function ScriptPage({ params }: PageProps) {
   const completedScripts = scripts.filter((s) => s.text.trim()).length;
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full overflow-hidden">
       <StepContainer
+        className="flex-1 min-h-0"
         title="Script"
         description="Write or generate video scripts for each slide"
         icon="📜"

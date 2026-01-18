@@ -164,8 +164,9 @@ export default function VideoPage({ params }: PageProps) {
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full overflow-hidden">
       <StepContainer
+        className="flex-1 min-h-0"
         title="Video Production"
         description="Preview and export your final video"
         icon="🎬"
