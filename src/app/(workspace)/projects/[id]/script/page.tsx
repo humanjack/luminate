@@ -8,10 +8,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StepContainer } from "@/components/workflow/step-container";
 import { StepNavigation } from "@/components/workflow/step-navigation";
+import { LLMProgressPanel, LLMStatus } from "@/components/workflow/llm-progress-panel";
 import { useProjectStore } from "@/stores/project-store";
+import { useSettingsStore } from "@/stores/settings-store";
 import { useLLM } from "@/hooks/useLLM";
 import { estimateReadingTime, formatDuration } from "@/lib/utils";
 import { cn } from "@/lib/utils";
+import { SCRIPT_SYSTEM_PROMPT, getScriptPrompt } from "@/lib/llm/prompts";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -28,12 +31,19 @@ interface ScriptData {
 export default function ScriptPage({ params }: PageProps) {
   const { id } = use(params);
   const { currentProject, saveScripts } = useProjectStore();
+  const { llmProvider } = useSettingsStore();
   const { streamScript, isStreaming, hasValidConfig } = useLLM();
 
   const [scripts, setScripts] = useState<ScriptData[]>([]);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatingIndex, setGeneratingIndex] = useState<number | null>(null);
+
+  // LLM Progress tracking
+  const [llmStatus, setLlmStatus] = useState<LLMStatus>("idle");
+  const [currentPrompt, setCurrentPrompt] = useState<string>("");
+  const [streamingOutput, setStreamingOutput] = useState<string>("");
+  const [llmError, setLlmError] = useState<string>("");
 
   // Initialize scripts from slides
   useEffect(() => {
@@ -79,14 +89,25 @@ export default function ScriptPage({ params }: PageProps) {
 
     setIsGenerating(true);
     setGeneratingIndex(index);
+    setLlmError("");
+    setStreamingOutput("");
 
     const slideContent = currentProject.slides[index].markdown;
+
+    // Set the prompt for display
+    const userPrompt = getScriptPrompt(slideContent, index);
+    setCurrentPrompt(userPrompt);
+    setLlmStatus("preparing");
+
     const generator = streamScript(slideContent, index);
     let fullText = "";
+
+    setLlmStatus("streaming");
 
     for await (const message of generator) {
       if (message.type === "text") {
         fullText += message.content;
+        setStreamingOutput(fullText);
         setScripts((prev) =>
           prev.map((script, i) =>
             i === index
@@ -96,10 +117,17 @@ export default function ScriptPage({ params }: PageProps) {
         );
       } else if (message.type === "error") {
         console.error("Script generation error:", message.content);
+        setLlmError(message.content);
+        setLlmStatus("error");
         break;
+      } else if (message.type === "done") {
+        setLlmStatus("complete");
       }
     }
 
+    if (llmStatus !== "error") {
+      setLlmStatus("complete");
+    }
     setIsGenerating(false);
     setGeneratingIndex(null);
   };
@@ -262,6 +290,17 @@ export default function ScriptPage({ params }: PageProps) {
                   )}
                 </Button>
               </div>
+
+              {/* LLM Progress Panel */}
+              <LLMProgressPanel
+                status={llmStatus}
+                prompt={currentPrompt}
+                systemPrompt={SCRIPT_SYSTEM_PROMPT}
+                output={streamingOutput}
+                error={llmError}
+                provider={llmProvider === "anthropic" ? "Anthropic API" : "Claude CLI"}
+                model={llmProvider === "anthropic" ? "Claude Sonnet" : undefined}
+              />
 
               <Textarea
                 value={currentScript?.text || ""}

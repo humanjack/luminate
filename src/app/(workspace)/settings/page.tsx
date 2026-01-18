@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Key, Mic, Video, Palette, Save } from "lucide-react";
+import { ArrowLeft, Key, Mic, Video, Palette, Save, CheckCircle, XCircle, Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,6 +19,15 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { useSettingsStore } from "@/stores/settings-store";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
+
+type VerificationStatus = "idle" | "verifying" | "valid" | "invalid";
+
+interface VerificationResult {
+  status: VerificationStatus;
+  message?: string;
+  warning?: string;
+}
 
 export default function SettingsPage() {
   const { toast } = useToast();
@@ -53,6 +62,12 @@ export default function SettingsPage() {
     loadSettings,
   } = useSettingsStore();
 
+  // Verification states
+  const [anthropicVerification, setAnthropicVerification] = useState<VerificationResult>({ status: "idle" });
+  const [claudeCliVerification, setClaudeCliVerification] = useState<VerificationResult>({ status: "idle" });
+  const [speechSuperVerification, setSpeechSuperVerification] = useState<VerificationResult>({ status: "idle" });
+  const [elsaVerification, setElsaVerification] = useState<VerificationResult>({ status: "idle" });
+
   useEffect(() => {
     loadSettings();
   }, [loadSettings]);
@@ -63,6 +78,175 @@ export default function SettingsPage() {
       title: "Settings saved",
       description: "Your settings have been saved successfully.",
     });
+  };
+
+  // Verification handlers
+  const verifyAnthropicKey = async () => {
+    if (!anthropicApiKey) {
+      setAnthropicVerification({ status: "invalid", message: "Please enter an API key first" });
+      return;
+    }
+
+    setAnthropicVerification({ status: "verifying" });
+
+    try {
+      const response = await fetch("/api/settings/verify/anthropic", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ apiKey: anthropicApiKey }),
+      });
+
+      const result = await response.json();
+
+      if (result.valid) {
+        setAnthropicVerification({
+          status: "valid",
+          message: result.message || "API key is valid",
+        });
+        toast({ title: "Verified", description: "Anthropic API key is valid!" });
+      } else {
+        setAnthropicVerification({
+          status: "invalid",
+          message: result.error || "Invalid API key",
+        });
+      }
+    } catch (error) {
+      setAnthropicVerification({
+        status: "invalid",
+        message: "Failed to verify API key",
+      });
+    }
+  };
+
+  const verifyClaudeCli = async () => {
+    setClaudeCliVerification({ status: "verifying" });
+
+    try {
+      const response = await fetch("/api/settings/verify/claude-cli", {
+        method: "POST",
+      });
+
+      const result = await response.json();
+
+      if (result.valid) {
+        setClaudeCliVerification({
+          status: "valid",
+          message: result.version ? `Claude CLI ${result.version}` : "Claude CLI is available",
+        });
+        toast({ title: "Verified", description: "Claude CLI is working!" });
+      } else {
+        setClaudeCliVerification({
+          status: "invalid",
+          message: result.error || "Claude CLI not found",
+        });
+      }
+    } catch (error) {
+      setClaudeCliVerification({
+        status: "invalid",
+        message: "Failed to verify Claude CLI",
+      });
+    }
+  };
+
+  const verifySpeechSuper = async () => {
+    if (!speechSuperApiKey || !speechSuperAppId) {
+      setSpeechSuperVerification({ status: "invalid", message: "Please enter both API Key and App ID" });
+      return;
+    }
+
+    setSpeechSuperVerification({ status: "verifying" });
+
+    try {
+      const response = await fetch("/api/settings/verify/speechsuper", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ apiKey: speechSuperApiKey, appId: speechSuperAppId }),
+      });
+
+      const result = await response.json();
+
+      if (result.valid) {
+        setSpeechSuperVerification({
+          status: "valid",
+          message: result.message,
+          warning: result.warning,
+        });
+        toast({ title: "Verified", description: result.message });
+      } else {
+        setSpeechSuperVerification({
+          status: "invalid",
+          message: result.error,
+        });
+      }
+    } catch (error) {
+      setSpeechSuperVerification({
+        status: "invalid",
+        message: "Failed to verify credentials",
+      });
+    }
+  };
+
+  const verifyElsa = async () => {
+    if (!elsaApiKey) {
+      setElsaVerification({ status: "invalid", message: "Please enter an API key first" });
+      return;
+    }
+
+    setElsaVerification({ status: "verifying" });
+
+    try {
+      const response = await fetch("/api/settings/verify/elsa", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ apiKey: elsaApiKey }),
+      });
+
+      const result = await response.json();
+
+      if (result.valid) {
+        setElsaVerification({
+          status: "valid",
+          message: result.message,
+          warning: result.warning,
+        });
+        toast({ title: "Verified", description: result.message });
+      } else {
+        setElsaVerification({
+          status: "invalid",
+          message: result.error,
+        });
+      }
+    } catch (error) {
+      setElsaVerification({
+        status: "invalid",
+        message: "Failed to verify API key",
+      });
+    }
+  };
+
+  // Verification status component
+  const VerificationBadge = ({ result }: { result: VerificationResult }) => {
+    if (result.status === "idle") return null;
+
+    return (
+      <div className={cn(
+        "flex items-center gap-2 mt-2 p-2 rounded-md text-sm",
+        result.status === "verifying" && "bg-muted text-muted-foreground",
+        result.status === "valid" && "bg-green-500/10 text-green-600 dark:text-green-400",
+        result.status === "invalid" && "bg-red-500/10 text-red-600 dark:text-red-400"
+      )}>
+        {result.status === "verifying" && <Loader2 className="h-4 w-4 animate-spin" />}
+        {result.status === "valid" && <CheckCircle className="h-4 w-4" />}
+        {result.status === "invalid" && <XCircle className="h-4 w-4" />}
+        <span>{result.status === "verifying" ? "Verifying..." : result.message}</span>
+        {result.warning && (
+          <span className="flex items-center gap-1 text-yellow-600 dark:text-yellow-400">
+            <AlertCircle className="h-3 w-3" />
+            {result.warning}
+          </span>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -119,7 +303,12 @@ export default function SettingsPage() {
                   <Label>Provider</Label>
                   <Select
                     value={llmProvider}
-                    onValueChange={(v) => setLLMProvider(v as any)}
+                    onValueChange={(v) => {
+                      setLLMProvider(v as any);
+                      // Reset verification when provider changes
+                      setAnthropicVerification({ status: "idle" });
+                      setClaudeCliVerification({ status: "idle" });
+                    }}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -136,16 +325,33 @@ export default function SettingsPage() {
                   </p>
                 </div>
 
-                {llmProvider === "anthropic" && (
+                {llmProvider === "anthropic" ? (
                   <>
                     <div className="space-y-2">
                       <Label>Anthropic API Key</Label>
-                      <Input
-                        type="password"
-                        placeholder="sk-ant-..."
-                        value={anthropicApiKey}
-                        onChange={(e) => setAnthropicApiKey(e.target.value)}
-                      />
+                      <div className="flex gap-2">
+                        <Input
+                          type="password"
+                          placeholder="sk-ant-..."
+                          value={anthropicApiKey}
+                          onChange={(e) => {
+                            setAnthropicApiKey(e.target.value);
+                            setAnthropicVerification({ status: "idle" });
+                          }}
+                          className="flex-1"
+                        />
+                        <Button
+                          variant="outline"
+                          onClick={verifyAnthropicKey}
+                          disabled={anthropicVerification.status === "verifying"}
+                        >
+                          {anthropicVerification.status === "verifying" ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            "Verify"
+                          )}
+                        </Button>
+                      </div>
                       <p className="text-xs text-muted-foreground">
                         Get your API key from{" "}
                         <a
@@ -157,6 +363,7 @@ export default function SettingsPage() {
                           console.anthropic.com
                         </a>
                       </p>
+                      <VerificationBadge result={anthropicVerification} />
                     </div>
 
                     <div className="space-y-2">
@@ -173,6 +380,31 @@ export default function SettingsPage() {
                       </Select>
                     </div>
                   </>
+                ) : (
+                  <div className="space-y-2">
+                    <Label>Claude Code CLI</Label>
+                    <div className="flex gap-2">
+                      <div className="flex-1 px-3 py-2 border rounded-md bg-muted text-muted-foreground text-sm">
+                        Using local Claude Code CLI
+                      </div>
+                      <Button
+                        variant="outline"
+                        onClick={verifyClaudeCli}
+                        disabled={claudeCliVerification.status === "verifying"}
+                      >
+                        {claudeCliVerification.status === "verifying" ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          "Check"
+                        )}
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Claude Code CLI must be installed. Run{" "}
+                      <code className="bg-muted px-1 rounded">npm install -g @anthropic-ai/claude-code</code>
+                    </p>
+                    <VerificationBadge result={claudeCliVerification} />
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -190,7 +422,11 @@ export default function SettingsPage() {
                   <Label>Provider</Label>
                   <Select
                     value={speechProvider}
-                    onValueChange={(v) => setSpeechProvider(v as any)}
+                    onValueChange={(v) => {
+                      setSpeechProvider(v as any);
+                      setSpeechSuperVerification({ status: "idle" });
+                      setElsaVerification({ status: "idle" });
+                    }}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -210,33 +446,75 @@ export default function SettingsPage() {
                         type="password"
                         placeholder="Your API key"
                         value={speechSuperApiKey}
-                        onChange={(e) =>
-                          setSpeechSuperCredentials(e.target.value, speechSuperAppId)
-                        }
+                        onChange={(e) => {
+                          setSpeechSuperCredentials(e.target.value, speechSuperAppId);
+                          setSpeechSuperVerification({ status: "idle" });
+                        }}
                       />
                     </div>
                     <div className="space-y-2">
                       <Label>SpeechSuper App ID</Label>
-                      <Input
-                        placeholder="Your App ID"
-                        value={speechSuperAppId}
-                        onChange={(e) =>
-                          setSpeechSuperCredentials(speechSuperApiKey, e.target.value)
-                        }
-                      />
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="Your App ID"
+                          value={speechSuperAppId}
+                          onChange={(e) => {
+                            setSpeechSuperCredentials(speechSuperApiKey, e.target.value);
+                            setSpeechSuperVerification({ status: "idle" });
+                          }}
+                          className="flex-1"
+                        />
+                        <Button
+                          variant="outline"
+                          onClick={verifySpeechSuper}
+                          disabled={speechSuperVerification.status === "verifying"}
+                        >
+                          {speechSuperVerification.status === "verifying" ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            "Verify"
+                          )}
+                        </Button>
+                      </div>
+                      <VerificationBadge result={speechSuperVerification} />
                     </div>
                   </>
                 ) : (
                   <div className="space-y-2">
                     <Label>ELSA API Key</Label>
-                    <Input
-                      type="password"
-                      placeholder="Your ELSA API key"
-                      value={elsaApiKey}
-                      onChange={(e) => setElsaApiKey(e.target.value)}
-                    />
+                    <div className="flex gap-2">
+                      <Input
+                        type="password"
+                        placeholder="Your ELSA API key"
+                        value={elsaApiKey}
+                        onChange={(e) => {
+                          setElsaApiKey(e.target.value);
+                          setElsaVerification({ status: "idle" });
+                        }}
+                        className="flex-1"
+                      />
+                      <Button
+                        variant="outline"
+                        onClick={verifyElsa}
+                        disabled={elsaVerification.status === "verifying"}
+                      >
+                        {elsaVerification.status === "verifying" ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          "Verify"
+                        )}
+                      </Button>
+                    </div>
+                    <VerificationBadge result={elsaVerification} />
                   </div>
                 )}
+
+                <div className="bg-muted/50 rounded-md p-3 text-sm text-muted-foreground">
+                  <p className="flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4" />
+                    Speech analysis is optional. Mock data will be used if not configured.
+                  </p>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>

@@ -18,10 +18,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StepContainer } from "@/components/workflow/step-container";
 import { StepNavigation } from "@/components/workflow/step-navigation";
+import { LLMProgressPanel, LLMStatus } from "@/components/workflow/llm-progress-panel";
 import { useProjectStore } from "@/stores/project-store";
 import { useSettingsStore } from "@/stores/settings-store";
 import { useLLM } from "@/hooks/useLLM";
 import { cn } from "@/lib/utils";
+import { CONTENT_SYSTEM_PROMPT, getContentPrompt } from "@/lib/llm/prompts";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -40,6 +42,12 @@ export default function ContentPage({ params }: PageProps) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [activeTab, setActiveTab] = useState("edit");
 
+  // LLM Progress tracking
+  const [llmStatus, setLlmStatus] = useState<LLMStatus>("idle");
+  const [currentPrompt, setCurrentPrompt] = useState<string>("");
+  const [streamingOutput, setStreamingOutput] = useState<string>("");
+  const [llmError, setLlmError] = useState<string>("");
+
   // Load existing content data
   useEffect(() => {
     if (currentProject?.contentData) {
@@ -55,6 +63,13 @@ export default function ContentPage({ params }: PageProps) {
 
     setIsGenerating(true);
     setMarkdown("");
+    setLlmError("");
+    setStreamingOutput("");
+
+    // Set the prompt for display
+    const userPrompt = getContentPrompt(currentProject.researchData.content, format, targetLength);
+    setCurrentPrompt(userPrompt);
+    setLlmStatus("preparing");
 
     const generator = streamContent(
       currentProject.researchData.content,
@@ -63,16 +78,26 @@ export default function ContentPage({ params }: PageProps) {
     );
     let fullContent = "";
 
+    setLlmStatus("streaming");
+
     for await (const message of generator) {
       if (message.type === "text") {
         fullContent += message.content;
         setMarkdown(fullContent);
+        setStreamingOutput(fullContent);
       } else if (message.type === "error") {
         setMarkdown(`Error: ${message.content}`);
+        setLlmError(message.content);
+        setLlmStatus("error");
         break;
+      } else if (message.type === "done") {
+        setLlmStatus("complete");
       }
     }
 
+    if (llmStatus !== "error") {
+      setLlmStatus("complete");
+    }
     setIsGenerating(false);
   };
 
@@ -250,6 +275,17 @@ export default function ContentPage({ params }: PageProps) {
               )}
             </Button>
           </div>
+
+          {/* LLM Progress Panel */}
+          <LLMProgressPanel
+            status={llmStatus}
+            prompt={currentPrompt}
+            systemPrompt={CONTENT_SYSTEM_PROMPT}
+            output={streamingOutput}
+            error={llmError}
+            provider={llmProvider === "anthropic" ? "Anthropic API" : "Claude CLI"}
+            model={llmProvider === "anthropic" ? "Claude Sonnet" : undefined}
+          />
 
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList>

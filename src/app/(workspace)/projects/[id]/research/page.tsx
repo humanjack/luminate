@@ -17,10 +17,12 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { StepContainer } from "@/components/workflow/step-container";
 import { StepNavigation } from "@/components/workflow/step-navigation";
+import { LLMProgressPanel, LLMStatus } from "@/components/workflow/llm-progress-panel";
 import { useProjectStore } from "@/stores/project-store";
 import { useSettingsStore } from "@/stores/settings-store";
 import { useLLM } from "@/hooks/useLLM";
 import { cn } from "@/lib/utils";
+import { RESEARCH_SYSTEM_PROMPT, getResearchPrompt } from "@/lib/llm/prompts";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -37,6 +39,12 @@ export default function ResearchPage({ params }: PageProps) {
   const [content, setContent] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
 
+  // LLM Progress tracking
+  const [llmStatus, setLlmStatus] = useState<LLMStatus>("idle");
+  const [currentPrompt, setCurrentPrompt] = useState<string>("");
+  const [streamingOutput, setStreamingOutput] = useState<string>("");
+  const [llmError, setLlmError] = useState<string>("");
+
   // Load existing research data
   useEffect(() => {
     if (currentProject?.researchData) {
@@ -51,20 +59,37 @@ export default function ResearchPage({ params }: PageProps) {
 
     setIsGenerating(true);
     setContent("");
+    setLlmError("");
+    setStreamingOutput("");
+
+    // Set the prompt for display
+    const userPrompt = getResearchPrompt(topic, depth);
+    setCurrentPrompt(userPrompt);
+    setLlmStatus("preparing");
 
     const generator = streamResearch(topic, depth);
     let fullContent = "";
+
+    setLlmStatus("streaming");
 
     for await (const message of generator) {
       if (message.type === "text") {
         fullContent += message.content;
         setContent(fullContent);
+        setStreamingOutput(fullContent);
       } else if (message.type === "error") {
         setContent(`Error: ${message.content}`);
+        setLlmError(message.content);
+        setLlmStatus("error");
         break;
+      } else if (message.type === "done") {
+        setLlmStatus("complete");
       }
     }
 
+    if (llmStatus !== "error") {
+      setLlmStatus("complete");
+    }
     setIsGenerating(false);
   };
 
@@ -177,6 +202,17 @@ export default function ResearchPage({ params }: PageProps) {
               </Select>
             </div>
           </div>
+
+          {/* LLM Progress Panel */}
+          <LLMProgressPanel
+            status={llmStatus}
+            prompt={currentPrompt}
+            systemPrompt={RESEARCH_SYSTEM_PROMPT}
+            output={streamingOutput}
+            error={llmError}
+            provider={llmProvider === "anthropic" ? "Anthropic API" : "Claude CLI"}
+            model={llmProvider === "anthropic" ? "Claude Sonnet" : undefined}
+          />
 
           <div className="space-y-2">
             <Label htmlFor="content">Research Content</Label>
