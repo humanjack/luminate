@@ -62,8 +62,13 @@ export function useLLM() {
                 try {
                   const parsed = JSON.parse(data);
                   yield parsed;
-                } catch {
-                  // Skip invalid JSON
+                } catch (e) {
+                  // Log parse failure for debugging, but continue processing
+                  console.error("[useLLM] Failed to parse research response:", data, e);
+                  // If it looks like text content, yield it as text
+                  if (data && !data.startsWith("{") && !data.startsWith("[")) {
+                    yield { type: "text", content: data };
+                  }
                 }
               }
             }
@@ -71,6 +76,7 @@ export function useLLM() {
         }
       } catch (err) {
         const message = (err as Error).message;
+        console.error("[useLLM] Research stream error:", message);
         setError(message);
         yield { type: "error", content: message };
       } finally {
@@ -130,8 +136,13 @@ export function useLLM() {
                 try {
                   const parsed = JSON.parse(data);
                   yield parsed;
-                } catch {
-                  // Skip invalid JSON
+                } catch (e) {
+                  // Log parse failure for debugging, but continue processing
+                  console.error("[useLLM] Failed to parse content response:", data, e);
+                  // If it looks like text content, yield it as text
+                  if (data && !data.startsWith("{") && !data.startsWith("[")) {
+                    yield { type: "text", content: data };
+                  }
                 }
               }
             }
@@ -139,6 +150,7 @@ export function useLLM() {
         }
       } catch (err) {
         const message = (err as Error).message;
+        console.error("[useLLM] Content stream error:", message);
         setError(message);
         yield { type: "error", content: message };
       } finally {
@@ -197,8 +209,13 @@ export function useLLM() {
                 try {
                   const parsed = JSON.parse(data);
                   yield parsed;
-                } catch {
-                  // Skip invalid JSON
+                } catch (e) {
+                  // Log parse failure for debugging, but continue processing
+                  console.error("[useLLM] Failed to parse script response:", data, e);
+                  // If it looks like text content, yield it as text
+                  if (data && !data.startsWith("{") && !data.startsWith("[")) {
+                    yield { type: "text", content: data };
+                  }
                 }
               }
             }
@@ -206,6 +223,7 @@ export function useLLM() {
         }
       } catch (err) {
         const message = (err as Error).message;
+        console.error("[useLLM] Script stream error:", message);
         setError(message);
         yield { type: "error", content: message };
       } finally {

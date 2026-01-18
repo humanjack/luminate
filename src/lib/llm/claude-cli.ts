@@ -1,24 +1,50 @@
-import { spawn } from "child_process";
+import { spawn, execSync } from "child_process";
 
 export interface StreamingMessage {
   type: "text" | "done" | "error";
   content: string;
 }
 
+// Timeout for CLI operations (60 seconds)
+const CLI_TIMEOUT_MS = 60000;
+
+/**
+ * Check if Claude CLI is available and accessible
+ */
+export function isClaudeCLIAvailable(): { available: boolean; error?: string } {
+  try {
+    execSync("which claude", { stdio: "pipe" });
+    return { available: true };
+  } catch {
+    return {
+      available: false,
+      error: "Claude CLI not found. Please install it with: npm install -g @anthropic-ai/claude-code",
+    };
+  }
+}
+
 async function* runClaudeCLI(prompt: string): AsyncGenerator<StreamingMessage> {
+  // Check if Claude CLI is available first
+  const cliCheck = isClaudeCLIAvailable();
+  if (!cliCheck.available) {
+    yield { type: "error", content: cliCheck.error! };
+    return;
+  }
+
   // Create a queue to collect messages
   const messageQueue: StreamingMessage[] = [];
   let resolveWait: (() => void) | null = null;
   let isComplete = false;
-  let spawnError: Error | null = null;
-
-  const child = spawn("claude", ["-p", prompt, "--output-format", "stream-json"], {
-    stdio: ["pipe", "pipe", "pipe"],
-    env: { ...process.env },
-  });
-
   let buffer = "";
   let stderrBuffer = "";
+
+  const enqueueMessage = (msg: StreamingMessage) => {
+    messageQueue.push(msg);
+    if (resolveWait) {
+      resolveWait();
+      resolveWait = null;
+    }
+  };
 
   const processLine = (line: string): StreamingMessage | null => {
     if (!line.trim()) return null;
@@ -76,13 +102,31 @@ async function* runClaudeCLI(prompt: string): AsyncGenerator<StreamingMessage> {
     return null;
   };
 
-  const enqueueMessage = (msg: StreamingMessage) => {
-    messageQueue.push(msg);
-    if (resolveWait) {
-      resolveWait();
-      resolveWait = null;
+  // Add --dangerously-skip-permissions flag to bypass permission prompts
+  // This is required for automated/headless usage
+  // --verbose is required when using --output-format stream-json with -p
+  const child = spawn("claude", [
+    "-p", prompt,
+    "--output-format", "stream-json",
+    "--dangerously-skip-permissions",
+    "--verbose",
+  ], {
+    stdio: ["pipe", "pipe", "pipe"],
+    env: { ...process.env },
+  });
+
+  // Set up timeout to kill process if it hangs
+  const timeoutId = setTimeout(() => {
+    if (!isComplete) {
+      child.kill("SIGTERM");
+      enqueueMessage({ type: "error", content: `Claude CLI timed out after ${CLI_TIMEOUT_MS / 1000} seconds` });
+      isComplete = true;
+      if (resolveWait) {
+        resolveWait();
+        resolveWait = null;
+      }
     }
-  };
+  }, CLI_TIMEOUT_MS);
 
   // Handle stdout data
   child.stdout?.on("data", (data: Buffer) => {
@@ -96,14 +140,28 @@ async function* runClaudeCLI(prompt: string): AsyncGenerator<StreamingMessage> {
     }
   });
 
-  // Handle stderr
+  // Handle stderr - send errors immediately for visibility
   child.stderr?.on("data", (data: Buffer) => {
-    stderrBuffer += data.toString();
+    const stderrText = data.toString();
+    stderrBuffer += stderrText;
+
+    // If stderr contains permission/auth issues, send immediately
+    if (stderrText.includes("permission") || stderrText.includes("auth") || stderrText.includes("error")) {
+      console.error("[Claude CLI stderr]:", stderrText);
+    }
   });
 
   // Handle spawn error
   child.on("error", (err: Error) => {
-    spawnError = err;
+    clearTimeout(timeoutId);
+    // Provide helpful error message for common spawn failures
+    let errorMessage: string;
+    if (err.message.includes("ENOENT")) {
+      errorMessage = "Claude CLI not found. Please install it with: npm install -g @anthropic-ai/claude-code";
+    } else {
+      errorMessage = err.message;
+    }
+    enqueueMessage({ type: "error", content: errorMessage });
     isComplete = true;
     if (resolveWait) {
       resolveWait();
@@ -113,6 +171,9 @@ async function* runClaudeCLI(prompt: string): AsyncGenerator<StreamingMessage> {
 
   // Handle process close
   child.on("close", (code: number | null) => {
+    // Clear the timeout since process completed
+    clearTimeout(timeoutId);
+
     // Process remaining buffer
     if (buffer) {
       const message = processLine(buffer);
@@ -120,7 +181,16 @@ async function* runClaudeCLI(prompt: string): AsyncGenerator<StreamingMessage> {
     }
 
     if (code !== 0 && stderrBuffer) {
-      enqueueMessage({ type: "error", content: stderrBuffer });
+      // Provide helpful error messages for common issues
+      let errorMessage = stderrBuffer;
+      if (stderrBuffer.includes("permission")) {
+        errorMessage = `Claude CLI permission error: ${stderrBuffer}\n\nTry running with --dangerously-skip-permissions flag or check your Claude CLI authentication.`;
+      } else if (stderrBuffer.includes("auth") || stderrBuffer.includes("login")) {
+        errorMessage = `Claude CLI authentication required. Please run "claude auth" to authenticate.`;
+      }
+      enqueueMessage({ type: "error", content: errorMessage });
+    } else if (code !== 0) {
+      enqueueMessage({ type: "error", content: `Claude CLI exited with code ${code}` });
     }
 
     enqueueMessage({ type: "done", content: "" });
@@ -140,9 +210,6 @@ async function* runClaudeCLI(prompt: string): AsyncGenerator<StreamingMessage> {
         break;
       }
     } else if (isComplete) {
-      if (spawnError) {
-        yield { type: "error", content: spawnError.message };
-      }
       break;
     } else {
       // Wait for more messages

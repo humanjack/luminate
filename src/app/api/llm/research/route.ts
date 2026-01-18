@@ -1,8 +1,8 @@
 import { NextRequest } from "next/server";
 import { db, settings } from "@/lib/db";
-import { eq } from "drizzle-orm";
 import * as anthropicClient from "@/lib/llm/anthropic-client";
 import * as claudeCli from "@/lib/llm/claude-cli";
+import { isClaudeCLIAvailable } from "@/lib/llm/claude-cli";
 
 export const runtime = "nodejs";
 
@@ -49,6 +49,15 @@ export async function POST(request: NextRequest) {
 
           generator = anthropicClient.streamResearch(apiKey, model, topic, depth);
         } else {
+          // Check if Claude CLI is available before starting
+          const cliCheck = isClaudeCLIAvailable();
+          if (!cliCheck.available) {
+            controller.enqueue(
+              encoder.encode(`data: ${JSON.stringify({ type: "error", content: cliCheck.error })}\n\n`)
+            );
+            controller.close();
+            return;
+          }
           generator = claudeCli.streamResearch(topic, depth);
         }
 

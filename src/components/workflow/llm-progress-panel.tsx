@@ -16,6 +16,10 @@ export interface LLMProgressPanelProps {
   provider?: string;
   model?: string;
   className?: string;
+  /** Debug information like stderr output */
+  debugInfo?: string;
+  /** Show debug mode toggle */
+  showDebugToggle?: boolean;
 }
 
 export function LLMProgressPanel({
@@ -27,9 +31,12 @@ export function LLMProgressPanel({
   provider = "Anthropic API",
   model,
   className,
+  debugInfo,
+  showDebugToggle = false,
 }: LLMProgressPanelProps) {
   const [isExpanded, setIsExpanded] = useState(true);
   const [showSystemPrompt, setShowSystemPrompt] = useState(false);
+  const [showDebug, setShowDebug] = useState(false);
   const outputRef = useRef<HTMLPreElement>(null);
 
   // Auto-scroll output when streaming
@@ -203,6 +210,39 @@ export function LLMProgressPanel({
               <pre className="text-xs bg-red-500/10 p-3 rounded-md overflow-auto max-h-32 whitespace-pre-wrap font-mono border-l-2 border-red-500 text-red-500">
                 {error}
               </pre>
+            </div>
+          )}
+
+          {/* Debug Info (collapsible) */}
+          {(showDebugToggle || debugInfo) && (
+            <div className="space-y-2">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowDebug(!showDebug);
+                }}
+                className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {showDebug ? (
+                  <ChevronDown className="h-3 w-3" />
+                ) : (
+                  <ChevronRight className="h-3 w-3" />
+                )}
+                <span>Debug Info</span>
+              </button>
+              {showDebug && (
+                <div className="space-y-2">
+                  <pre className="text-xs bg-yellow-500/10 p-3 rounded-md overflow-auto max-h-32 whitespace-pre-wrap font-mono border-l-2 border-yellow-500 text-yellow-700 dark:text-yellow-400">
+                    {debugInfo || "No debug information available"}
+                  </pre>
+                  <div className="text-xs text-muted-foreground">
+                    <p>Provider: {provider}</p>
+                    {model && <p>Model: {model}</p>}
+                    <p>Status: {status}</p>
+                    {output && <p>Output length: {output.length} chars</p>}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </CardContent>
