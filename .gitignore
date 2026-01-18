@@ -50,3 +50,12 @@ next-env.d.ts
 # Recordings and exports
 /public/recordings/
 /public/exports/
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+.cache/
