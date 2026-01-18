@@ -187,13 +187,13 @@ export const useSettingsStore = create<SettingsState>()(
       hasValidLLMConfig: () => {
         const state = get();
         if (state.llmProvider === "anthropic") {
-          return state.anthropicApiKey.length > 0;
+          return (state.anthropicApiKey?.length ?? 0) > 0;
         }
         if (state.llmProvider === "openai") {
-          return state.openaiApiKey.length > 0;
+          return (state.openaiApiKey?.length ?? 0) > 0;
         }
         if (state.llmProvider === "google") {
-          return state.googleApiKey.length > 0;
+          return (state.googleApiKey?.length ?? 0) > 0;
         }
         // Claude CLI doesn't need API key
         return true;
@@ -202,9 +202,9 @@ export const useSettingsStore = create<SettingsState>()(
       hasValidSpeechConfig: () => {
         const state = get();
         if (state.speechProvider === "speechsuper") {
-          return state.speechSuperApiKey.length > 0 && state.speechSuperAppId.length > 0;
+          return (state.speechSuperApiKey?.length ?? 0) > 0 && (state.speechSuperAppId?.length ?? 0) > 0;
         }
-        return state.elsaApiKey.length > 0;
+        return (state.elsaApiKey?.length ?? 0) > 0;
       },
     }),
     {
