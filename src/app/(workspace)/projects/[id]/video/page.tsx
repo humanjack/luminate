@@ -38,7 +38,7 @@ type ExportStatus = "idle" | "preparing" | "processing" | "complete" | "error";
 
 export default function VideoPage({ params }: PageProps) {
   const { id } = use(params);
-  const { currentProject, saveVideo, updateVideoProgress } = useProjectStore();
+  const { currentProject } = useProjectStore();
   const { defaultResolution, defaultTransition, youtubeConnected } = useSettingsStore();
 
   const [resolution, setResolution] = useState<string>(defaultResolution);
@@ -104,54 +104,66 @@ export default function VideoPage({ params }: PageProps) {
     };
   }, [isPlaying, totalDuration, recordings]);
 
+  const [exportArtifacts, setExportArtifacts] = useState<{
+    mp4?: string;
+    captions?: string;
+    transcript?: string;
+    sources?: string;
+  }>({});
+  const [exportError, setExportError] = useState<string | null>(null);
+
   const handleExport = async () => {
     if (!readiness.canExport) {
-      // Defensive — UI also disables the button. Don't even hit saveVideo.
       return;
     }
     setExportStatus("preparing");
     setExportProgress(0);
+    setExportError(null);
+    setExportArtifacts({});
 
     try {
-      // Initialize video in database
-      await saveVideo(id, {
-        resolution,
-        status: "processing",
-        progress: 0,
-      });
-
       setExportStatus("processing");
+      // Tick a small progress fake while the server is rendering so the bar
+      // doesn't sit at zero. The route is synchronous; this is just UI feedback.
+      const tick = setInterval(() => {
+        setExportProgress((p) => Math.min(p + 3, 90));
+      }, 500);
 
-      // Simulate export progress (in a real app, this would use FFmpeg.wasm)
-      for (let i = 0; i <= 100; i += 5) {
-        await new Promise((resolve) => setTimeout(resolve, 200));
-        setExportProgress(i);
-        await updateVideoProgress(id, i, "processing");
+      const res = await fetch(`/api/projects/${id}/export`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ resolution }),
+      });
+      clearInterval(tick);
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || `Export failed (${res.status})`);
       }
-
-      // Create a mock video URL (in production, this would be the actual video)
-      const mockVideoUrl = URL.createObjectURL(new Blob(["mock video data"], { type: "video/mp4" }));
-      setVideoUrl(mockVideoUrl);
-
-      await updateVideoProgress(id, 100, "completed");
+      const completed = await res.json();
+      setExportProgress(100);
+      setVideoUrl(completed.outputPath);
+      setExportArtifacts({
+        mp4: completed.outputPath,
+        captions: completed.captionsPath,
+        transcript: completed.transcriptPath,
+        sources: completed.sourcesPath,
+      });
       setExportStatus("complete");
-
-      // Show YouTube upload dialog
-      setShowYouTubeDialog(true);
     } catch (error) {
       console.error("Export failed:", error);
+      setExportError((error as Error).message || "Export failed");
       setExportStatus("error");
-      await updateVideoProgress(id, 0, "failed");
     }
   };
 
-  const handleDownload = () => {
-    if (videoUrl) {
-      const a = document.createElement("a");
-      a.href = videoUrl;
-      a.download = `${currentProject?.name || "video"}.mp4`;
-      a.click();
-    }
+  const handleDownload = (url?: string, filename?: string) => {
+    const target = url || videoUrl;
+    if (!target) return;
+    const a = document.createElement("a");
+    a.href = target;
+    a.download = filename || `${currentProject?.name || "video"}.mp4`;
+    a.click();
   };
 
   const handleYouTubeUpload = async () => {
@@ -358,41 +370,92 @@ export default function VideoPage({ params }: PageProps) {
                   )}
 
                   {exportStatus === "complete" && (
-                    <div className="text-center space-y-3">
-                      <div className="text-green-500 font-medium">
-                        Export Complete!
+                    <div
+                      data-testid="export-complete"
+                      className="space-y-3"
+                    >
+                      <div className="text-emerald-600 font-medium text-center">
+                        Export complete
                       </div>
-                      <div className="flex gap-2">
+                      <div className="grid grid-cols-2 gap-2">
                         <Button
                           variant="outline"
-                          className="flex-1"
-                          onClick={handleDownload}
+                          onClick={() =>
+                            handleDownload(
+                              exportArtifacts.mp4,
+                              `${currentProject?.name || "video"}.mp4`
+                            )
+                          }
+                          data-testid="download-mp4"
                         >
-                          <Download className="h-4 w-4 mr-2" />
-                          Download
+                          <Download className="h-4 w-4 mr-2" /> MP4
                         </Button>
                         <Button
-                          className="flex-1"
-                          onClick={() => setShowYouTubeDialog(true)}
+                          variant="outline"
+                          onClick={() =>
+                            handleDownload(
+                              exportArtifacts.captions,
+                              `${currentProject?.name || "video"}.vtt`
+                            )
+                          }
+                          disabled={!exportArtifacts.captions}
+                          data-testid="download-captions"
                         >
-                          <Youtube className="h-4 w-4 mr-2" />
-                          YouTube
+                          <Download className="h-4 w-4 mr-2" /> Captions
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() =>
+                            handleDownload(
+                              exportArtifacts.transcript,
+                              `${currentProject?.name || "video"}.transcript.txt`
+                            )
+                          }
+                          disabled={!exportArtifacts.transcript}
+                          data-testid="download-transcript"
+                        >
+                          <Download className="h-4 w-4 mr-2" /> Transcript
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() =>
+                            handleDownload(
+                              exportArtifacts.sources,
+                              `${currentProject?.name || "video"}.sources.md`
+                            )
+                          }
+                          disabled={!exportArtifacts.sources}
+                          data-testid="download-sources"
+                        >
+                          <Download className="h-4 w-4 mr-2" /> Sources
                         </Button>
                       </div>
+                      <Button
+                        className="w-full"
+                        onClick={() => setShowYouTubeDialog(true)}
+                      >
+                        <Youtube className="h-4 w-4 mr-2" />
+                        Upload to YouTube
+                      </Button>
                     </div>
                   )}
 
                   {exportStatus === "error" && (
-                    <div className="space-y-3">
-                      <div className="text-red-500 font-medium text-center">
-                        Export Failed
+                    <div className="space-y-3" data-testid="export-error">
+                      <div className="text-red-600 font-medium text-center">
+                        Export failed
                       </div>
+                      {exportError && (
+                        <p className="text-xs text-red-600 text-center">
+                          {exportError}
+                        </p>
+                      )}
                       <Button
                         variant="outline"
                         className="w-full"
                         onClick={handleExport}
                       >
-                        Try Again
+                        Try again
                       </Button>
                     </div>
                   )}
