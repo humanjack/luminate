@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, use } from "react";
-import { Mic, Square, Play, Pause, Trash2, ChevronLeft, ChevronRight, RotateCcw } from "lucide-react";
+import { Mic, Square, Play, Pause, Trash2, ChevronLeft, ChevronRight, CheckCircle2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,14 +21,17 @@ interface PageProps {
 
 interface RecordingData {
   slideIndex: number;
-  audioBlob?: Blob;
+  recordingId?: string;
   audioUrl?: string;
   duration: number;
+  saved: boolean;
+  saving?: boolean;
+  error?: string;
 }
 
 export default function RecordingPage({ params }: PageProps) {
   const { id } = use(params);
-  const { currentProject, saveRecording } = useProjectStore();
+  const { currentProject, saveRecording, deleteRecording } = useProjectStore();
   const { teleprompterSpeed, teleprompterFontSize, showWaveform, defaultRecordingMode } = useSettingsStore();
 
   const [recordings, setRecordings] = useState<RecordingData[]>([]);
@@ -52,16 +55,29 @@ export default function RecordingPage({ params }: PageProps) {
   const currentScript = currentProject?.scripts?.[currentSlideIndex];
   const currentRecording = recordings[currentSlideIndex];
 
-  // Initialize recordings array
+  // Hydrate recordings from saved DB rows so refresh keeps audio
   useEffect(() => {
-    if (currentProject?.scripts) {
-      setRecordings(
-        currentProject.scripts.map((_, index) => ({
-          slideIndex: index,
-          duration: 0,
-        }))
-      );
+    if (!currentProject?.scripts) return;
+    const saved = currentProject.recordings ?? [];
+    const bySlide = new Map<number, typeof saved[number]>();
+    for (const r of saved) {
+      if (typeof r.slideIndex === "number") bySlide.set(r.slideIndex, r);
     }
+    setRecordings(
+      currentProject.scripts.map((_, index) => {
+        const r = bySlide.get(index);
+        if (r?.audioPath) {
+          return {
+            slideIndex: index,
+            recordingId: r.id,
+            audioUrl: r.audioPath,
+            duration: r.duration ?? 0,
+            saved: true,
+          };
+        }
+        return { slideIndex: index, duration: 0, saved: false };
+      })
+    );
   }, [currentProject]);
 
   // Audio level monitoring
@@ -117,19 +133,68 @@ export default function RecordingPage({ params }: PageProps) {
         }
       };
 
-      mediaRecorderRef.current.onstop = () => {
+      mediaRecorderRef.current.onstop = async () => {
         const blob = new Blob(chunksRef.current, { type: "audio/webm" });
-        const url = URL.createObjectURL(blob);
+        const localUrl = URL.createObjectURL(blob);
+        const slideIdx = currentSlideIndex;
+        const takeDuration = recordingTime;
 
         setRecordings((prev) =>
           prev.map((rec, i) =>
-            i === currentSlideIndex
-              ? { ...rec, audioBlob: blob, audioUrl: url, duration: recordingTime }
+            i === slideIdx
+              ? {
+                  slideIndex: i,
+                  audioUrl: localUrl,
+                  duration: takeDuration,
+                  saved: false,
+                  saving: true,
+                  error: undefined,
+                }
               : rec
           )
         );
 
         stream.getTracks().forEach((track) => track.stop());
+
+        // Persist audio bytes to the server immediately so re-records and
+        // refreshes get the durable path.
+        try {
+          const base64 = await blobToBase64(blob);
+          const saved = await saveRecording(id, {
+            slideIndex: slideIdx,
+            slideId: currentProject?.scripts?.[slideIdx]?.slideId || undefined,
+            audioPath: "",
+            duration: takeDuration,
+            // @ts-expect-error audioData is forwarded to the API but isn't on the DB type
+            audioData: base64,
+          });
+          setRecordings((prev) =>
+            prev.map((rec, i) =>
+              i === slideIdx
+                ? {
+                    slideIndex: i,
+                    recordingId: saved.id,
+                    audioUrl: saved.audioPath || localUrl,
+                    duration: saved.duration ?? takeDuration,
+                    saved: true,
+                  }
+                : rec
+            )
+          );
+        } catch (err) {
+          debug.error("workflow", `save recording failed: ${(err as Error).message}`);
+          setRecordings((prev) =>
+            prev.map((rec, i) =>
+              i === slideIdx
+                ? {
+                    ...rec,
+                    saving: false,
+                    error: (err as Error).message || "Failed to save recording",
+                  }
+                : rec
+            )
+          );
+        }
       };
 
       mediaRecorderRef.current.start(1000);
@@ -197,59 +262,41 @@ export default function RecordingPage({ params }: PageProps) {
     }
   };
 
-  const deleteRecording = () => {
-    if (currentRecording?.audioUrl) {
-      URL.revokeObjectURL(currentRecording.audioUrl);
+  const handleDeleteRecording = async () => {
+    const target = currentRecording;
+    if (!target) return;
+    // Revoke the object URL only when it was a blob: URL (a saved recording
+    // uses /recordings/... which we must keep as a regular path).
+    if (target.audioUrl?.startsWith("blob:")) {
+      URL.revokeObjectURL(target.audioUrl);
+    }
+    if (target.recordingId) {
+      try {
+        await deleteRecording(target.recordingId);
+      } catch (err) {
+        debug.error("workflow", `delete recording failed: ${(err as Error).message}`);
+      }
     }
     setRecordings((prev) =>
       prev.map((rec, i) =>
         i === currentSlideIndex
-          ? { slideIndex: i, duration: 0 }
+          ? { slideIndex: i, duration: 0, saved: false }
           : rec
       )
     );
   };
 
   const handleSaveAndNext = async () => {
-    const completedRecordings = recordings.filter((r) => r.audioBlob);
-    if (completedRecordings.length === 0) {
-      debug.warn("workflow", "handleSaveAndNext: no recordings to save");
+    const completed = recordings.filter((r) => r.saved);
+    if (completed.length === 0) {
+      debug.warn("workflow", "handleSaveAndNext: no saved recordings");
       return false;
     }
-
-    debug.log("workflow", `handleSaveAndNext: saving ${completedRecordings.length} recordings...`);
-
-    try {
-      // Save each recording
-      for (const recording of completedRecordings) {
-        if (recording.audioBlob) {
-          const reader = new FileReader();
-          const audioData = await new Promise<string>((resolve) => {
-            reader.onloadend = () => {
-              const base64 = (reader.result as string).split(",")[1];
-              resolve(base64);
-            };
-            reader.readAsDataURL(recording.audioBlob!);
-          });
-
-          await saveRecording(id, {
-            slideIndex: recording.slideIndex,
-            slideId: currentProject?.scripts?.[recording.slideIndex]?.slideId || undefined,
-            audioPath: "", // Will be set by the server
-            duration: recording.duration,
-          });
-        }
-      }
-
-      debug.log("workflow", "handleSaveAndNext: recordings saved successfully");
-      return true;
-    } catch (error) {
-      debug.error("workflow", `handleSaveAndNext failed: ${(error as Error).message}`);
-      return false;
-    }
+    return true;
   };
 
-  const completedRecordings = recordings.filter((r) => r.audioBlob).length;
+  const completedRecordings = recordings.filter((r) => r.saved).length;
+  const savingCount = recordings.filter((r) => r.saving).length;
   const totalRecordings = recordings.length;
 
   return (
@@ -400,12 +447,37 @@ export default function RecordingPage({ params }: PageProps) {
 
                   {/* Playback */}
                   {currentRecording?.audioUrl && (
-                    <div className="border-t pt-4 space-y-4">
+                    <div className="border-t pt-4 space-y-3">
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-medium">
                           Recording ({formatDuration(currentRecording.duration)})
                         </span>
-                        <div className="flex gap-2">
+                        <div className="flex items-center gap-2">
+                          {currentRecording.saving ? (
+                            <span
+                              data-testid="recording-saving"
+                              className="text-xs text-muted-foreground inline-flex items-center gap-1"
+                            >
+                              <span className="h-2 w-2 rounded-full bg-yellow-500 animate-pulse" />
+                              Saving…
+                            </span>
+                          ) : currentRecording.saved ? (
+                            <span
+                              data-testid="recording-saved"
+                              className="text-xs text-emerald-600 inline-flex items-center gap-1"
+                            >
+                              <CheckCircle2 className="h-3.5 w-3.5" />
+                              Saved
+                            </span>
+                          ) : currentRecording.error ? (
+                            <span
+                              data-testid="recording-error"
+                              className="text-xs text-red-600 inline-flex items-center gap-1"
+                            >
+                              <AlertCircle className="h-3.5 w-3.5" />
+                              {currentRecording.error}
+                            </span>
+                          ) : null}
                           <Button
                             variant="outline"
                             size="sm"
@@ -426,7 +498,7 @@ export default function RecordingPage({ params }: PageProps) {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={deleteRecording}
+                            onClick={handleDeleteRecording}
                           >
                             <Trash2 className="h-4 w-4 mr-1" />
                             Delete
@@ -442,7 +514,12 @@ export default function RecordingPage({ params }: PageProps) {
               <Card>
                 <CardHeader className="py-3">
                   <CardTitle className="text-sm font-medium">
-                    Progress: {completedRecordings} / {totalRecordings} recordings
+                    Progress: {completedRecordings} / {totalRecordings} saved
+                    {savingCount > 0 && (
+                      <span className="ml-2 text-xs text-muted-foreground">
+                        ({savingCount} saving…)
+                      </span>
+                    )}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="py-0 pb-3">
@@ -453,10 +530,25 @@ export default function RecordingPage({ params }: PageProps) {
                         onClick={() => !isRecording && setCurrentSlideIndex(index)}
                         className={cn(
                           "flex-1 h-2 rounded-full transition-colors",
-                          rec.audioBlob ? "bg-primary" : "bg-muted",
+                          rec.saved
+                            ? "bg-primary"
+                            : rec.saving
+                            ? "bg-yellow-400"
+                            : rec.error
+                            ? "bg-red-500"
+                            : "bg-muted",
                           index === currentSlideIndex && "ring-2 ring-primary ring-offset-2"
                         )}
                         disabled={isRecording}
+                        aria-label={`Slide ${index + 1} ${
+                          rec.saved
+                            ? "saved"
+                            : rec.saving
+                            ? "saving"
+                            : rec.error
+                            ? "error"
+                            : "empty"
+                        }`}
                       />
                     ))}
                   </div>
@@ -476,4 +568,17 @@ export default function RecordingPage({ params }: PageProps) {
       />
     </div>
   );
+}
+
+async function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const result = reader.result as string;
+      const idx = result.indexOf(",");
+      resolve(idx >= 0 ? result.slice(idx + 1) : result);
+    };
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
 }
