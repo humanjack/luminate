@@ -44,6 +44,9 @@ export const slides = sqliteTable("slides", {
   markdown: text("markdown").notNull(), // Slidev markdown for this slide
   imageData: text("image_data"), // Base64 encoded PNG or path to image file
   theme: text("theme").default("default"),
+  // Source claim IDs that back the assertions on this slide
+  sourceRefs: text("source_refs", { mode: "json" }).$type<string[]>(),
+  outlineItemId: text("outline_item_id"),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });
@@ -57,6 +60,8 @@ export const scripts = sqliteTable("scripts", {
   text: text("text").notNull(),
   speakerNotes: text("speaker_notes"),
   estimatedDuration: integer("estimated_duration"), // seconds
+  // Linked claim ids that this script relies on
+  sourceRefs: text("source_refs", { mode: "json" }).$type<string[]>(),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });
@@ -113,6 +118,74 @@ export const videos = sqliteTable("videos", {
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });
 
+// Sources - first-class research sources (URL, pasted text, manual)
+export const sources = sqliteTable("sources", {
+  id: text("id").primaryKey(),
+  projectId: text("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  type: text("type", { enum: ["url", "text", "manual"] }).notNull(),
+  url: text("url"),
+  title: text("title"),
+  author: text("author"),
+  publishedAt: text("published_at"), // ISO date string
+  fetchedText: text("fetched_text"),
+  status: text("status", { enum: ["pending", "fetched", "approved", "rejected", "failed"] })
+    .notNull()
+    .default("pending"),
+  trustNotes: text("trust_notes"),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+});
+
+// Claims - normalized research claims, each linked to >=0 sources
+export const claims = sqliteTable("claims", {
+  id: text("id").primaryKey(),
+  projectId: text("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  text: text("text").notNull(),
+  // Array of source ids backing this claim. Empty array means unsupported.
+  sourceIds: text("source_ids", { mode: "json" }).$type<string[]>().notNull().default([]),
+  pinned: integer("pinned", { mode: "boolean" }).notNull().default(false),
+  status: text("status", { enum: ["proposed", "approved", "rejected"] })
+    .notNull()
+    .default("proposed"),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+});
+
+// Outline items - story structure between research and slides
+export const outlineItems = sqliteTable("outline_items", {
+  id: text("id").primaryKey(),
+  projectId: text("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  index: integer("index").notNull(),
+  title: text("title").notNull(),
+  summary: text("summary"),
+  speakerGoal: text("speaker_goal"),
+  // Linked claim ids
+  claimIds: text("claim_ids", { mode: "json" }).$type<string[]>().notNull().default([]),
+  approved: integer("approved", { mode: "boolean" }).notNull().default(false),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+});
+
+// Exports - separate export jobs/artifacts from finished-video metadata
+export const exports = sqliteTable("exports", {
+  id: text("id").primaryKey(),
+  projectId: text("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  videoId: text("video_id").references(() => videos.id, { onDelete: "set null" }),
+  status: text("status", { enum: ["pending", "rendering", "encoding", "completed", "failed"] })
+    .notNull()
+    .default("pending"),
+  progress: integer("progress").notNull().default(0), // 0-100
+  resolution: text("resolution").notNull().default("1920x1080"),
+  outputPath: text("output_path"),
+  captionsPath: text("captions_path"),
+  transcriptPath: text("transcript_path"),
+  sourcesPath: text("sources_path"),
+  duration: real("duration"),
+  errorMessage: text("error_message"),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+});
+
 // Settings table for API keys and preferences
 export const settings = sqliteTable("settings", {
   key: text("key").primaryKey(),
@@ -129,6 +202,42 @@ export const projectsRelations = relations(projects, ({ one, many }) => ({
   recordings: many(recordings),
   analysisResults: many(analysisResults),
   videos: many(videos),
+  sources: many(sources),
+  claims: many(claims),
+  outlineItems: many(outlineItems),
+  exports: many(exports),
+}));
+
+export const sourcesRelations = relations(sources, ({ one }) => ({
+  project: one(projects, {
+    fields: [sources.projectId],
+    references: [projects.id],
+  }),
+}));
+
+export const claimsRelations = relations(claims, ({ one }) => ({
+  project: one(projects, {
+    fields: [claims.projectId],
+    references: [projects.id],
+  }),
+}));
+
+export const outlineItemsRelations = relations(outlineItems, ({ one }) => ({
+  project: one(projects, {
+    fields: [outlineItems.projectId],
+    references: [projects.id],
+  }),
+}));
+
+export const exportsRelations = relations(exports, ({ one }) => ({
+  project: one(projects, {
+    fields: [exports.projectId],
+    references: [projects.id],
+  }),
+  video: one(videos, {
+    fields: [exports.videoId],
+    references: [videos.id],
+  }),
 }));
 
 export const researchDataRelations = relations(researchData, ({ one }) => ({
@@ -212,4 +321,12 @@ export type AnalysisResult = typeof analysisResults.$inferSelect;
 export type NewAnalysisResult = typeof analysisResults.$inferInsert;
 export type Video = typeof videos.$inferSelect;
 export type NewVideo = typeof videos.$inferInsert;
+export type Source = typeof sources.$inferSelect;
+export type NewSource = typeof sources.$inferInsert;
+export type Claim = typeof claims.$inferSelect;
+export type NewClaim = typeof claims.$inferInsert;
+export type OutlineItem = typeof outlineItems.$inferSelect;
+export type NewOutlineItem = typeof outlineItems.$inferInsert;
+export type Export = typeof exports.$inferSelect;
+export type NewExport = typeof exports.$inferInsert;
 export type Setting = typeof settings.$inferSelect;

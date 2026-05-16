@@ -55,6 +55,8 @@ beforeAll(() => {
       markdown TEXT NOT NULL,
       image_data TEXT,
       theme TEXT DEFAULT 'default',
+      source_refs TEXT,
+      outline_item_id TEXT,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL
     );
@@ -67,6 +69,7 @@ beforeAll(() => {
       text TEXT NOT NULL,
       speaker_notes TEXT,
       estimated_duration INTEGER,
+      source_refs TEXT,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL
     );
