@@ -1,5 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, projects, researchData, contentData, slides, scripts, recordings, analysisResults, videos } from "@/lib/db";
+import {
+  db,
+  projects,
+  researchData,
+  contentData,
+  slides,
+  scripts,
+  recordings,
+  analysisResults,
+  videos,
+  sources,
+  claims,
+  outlineItems,
+} from "@/lib/db";
 import { eq } from "drizzle-orm";
 
 interface RouteParams {
@@ -25,6 +38,13 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const projectRecordings = await db.select().from(recordings).where(eq(recordings.projectId, id));
     const projectAnalysis = await db.select().from(analysisResults).where(eq(analysisResults.projectId, id));
     const projectVideos = await db.select().from(videos).where(eq(videos.projectId, id));
+    const projectSources = await db.select().from(sources).where(eq(sources.projectId, id));
+    const projectClaims = await db.select().from(claims).where(eq(claims.projectId, id));
+    const projectOutline = await db
+      .select()
+      .from(outlineItems)
+      .where(eq(outlineItems.projectId, id));
+    projectOutline.sort((a, b) => a.index - b.index);
 
     return NextResponse.json({
       ...project,
@@ -35,6 +55,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       recordings: projectRecordings,
       analysisResults: projectAnalysis,
       videos: projectVideos,
+      sources: projectSources,
+      claims: projectClaims,
+      outlineItems: projectOutline,
     });
   } catch (error) {
     console.error("Failed to fetch project:", error);

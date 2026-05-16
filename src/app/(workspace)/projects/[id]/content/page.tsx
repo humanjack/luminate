@@ -19,6 +19,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StepContainer } from "@/components/workflow/step-container";
 import { StepNavigation } from "@/components/workflow/step-navigation";
 import { LLMProgressPanel, LLMStatus } from "@/components/workflow/llm-progress-panel";
+import { OutlineEditor, DraftOutlineItem } from "@/components/workflow/outline-editor";
 import { useProjectStore } from "@/stores/project-store";
 import { useSettingsStore } from "@/stores/settings-store";
 import { useLLM } from "@/hooks/useLLM";
@@ -32,9 +33,9 @@ interface PageProps {
 
 export default function ContentPage({ params }: PageProps) {
   const { id } = use(params);
-  const { currentProject, saveContentData } = useProjectStore();
+  const { currentProject, saveContentData, saveOutline } = useProjectStore();
   const { hasValidLLMConfig, llmProvider } = useSettingsStore();
-  const { streamContent, isStreaming } = useLLM();
+  const { streamContent } = useLLM();
 
   const [title, setTitle] = useState("");
   const [format, setFormat] = useState<"presentation" | "tutorial" | "explainer">("presentation");
@@ -42,6 +43,8 @@ export default function ContentPage({ params }: PageProps) {
   const [markdown, setMarkdown] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [activeTab, setActiveTab] = useState("edit");
+  const [outlineSaving, setOutlineSaving] = useState(false);
+  const [outlineError, setOutlineError] = useState<string | null>(null);
 
   // LLM Progress tracking
   const [llmStatus, setLlmStatus] = useState<LLMStatus>("idle");
@@ -134,6 +137,18 @@ export default function ContentPage({ params }: PageProps) {
     setIsGenerating(false);
   };
 
+  const handleSaveOutline = async (items: DraftOutlineItem[]) => {
+    setOutlineSaving(true);
+    setOutlineError(null);
+    try {
+      await saveOutline(id, items);
+    } catch (err) {
+      setOutlineError((err as Error).message || "Failed to save outline");
+    } finally {
+      setOutlineSaving(false);
+    }
+  };
+
   const handleSaveAndNext = async () => {
     if (!markdown.trim()) {
       debug.warn("workflow", "handleSaveAndNext: no markdown content");
@@ -172,6 +187,12 @@ export default function ContentPage({ params }: PageProps) {
 
   const isValid = hasValidLLMConfig();
   const hasResearch = !!currentProject?.researchData?.content;
+
+  // Outline gate (issue #5): user must approve every outline item before slides
+  const outlineItems = currentProject?.outlineItems ?? [];
+  const outlineApproved =
+    outlineItems.length > 0 && outlineItems.every((it) => it.approved);
+  const outlineGateBlocking = !outlineApproved;
 
   // Simple markdown preview
   const renderPreview = () => {
@@ -331,6 +352,30 @@ export default function ContentPage({ params }: PageProps) {
             model={llmProvider === "anthropic" ? "Claude Sonnet" : undefined}
           />
 
+          <OutlineEditor
+            initial={outlineItems}
+            claims={currentProject?.claims ?? []}
+            fallbackMarkdown={markdown}
+            onSave={handleSaveOutline}
+            saving={outlineSaving}
+            saveError={outlineError}
+          />
+
+          {outlineGateBlocking && (
+            <Card
+              className="border-amber-500 bg-amber-50/40"
+              data-testid="outline-gate-warning"
+            >
+              <CardContent className="flex items-center gap-3 py-3">
+                <AlertCircle className="h-5 w-5 text-amber-600" />
+                <div className="text-sm">
+                  <span className="font-medium">Outline not approved.</span>{" "}
+                  Approve every outline item above to unlock slide generation.
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList>
               <TabsTrigger value="edit">Edit</TabsTrigger>
@@ -368,9 +413,11 @@ export default function ContentPage({ params }: PageProps) {
         projectId={id}
         currentStep={2}
         onNext={handleSaveAndNext}
-        isNextDisabled={!markdown.trim()}
+        isNextDisabled={!markdown.trim() || outlineGateBlocking}
         isNextLoading={isGenerating}
-        nextLabel="Continue to Slides"
+        nextLabel={
+          outlineGateBlocking ? "Approve outline to continue" : "Continue to Slides"
+        }
       />
     </div>
   );
