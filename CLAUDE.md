@@ -6,9 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Luminate is a YouTube video automation application with a 7-step workflow: Research → Content → Slides → Script → Recording → Analysis → Video.
 
-**Frontend**: Next.js 15 with React 19, SQLite/Drizzle for persistence, and Zustand for client state.
+**Frontend & MVP runtime**: Next.js 15 with React 19, SQLite/Drizzle for persistence, and Zustand for client state. **Next.js is the canonical API/runtime for the MVP** (see [`docs/runtime-boundary.md`](docs/runtime-boundary.md)).
 
-**Backend** (optional): Python FastAPI backend with LangChain, SQLAlchemy, and streaming LLM support. Can run standalone or alongside Next.js API routes.
+**Backend** (legacy/reference): Python FastAPI backend with LangChain, SQLAlchemy, and streaming LLM support. **Frozen** as of issue #7 — kept for reference. No new MVP work should land in `/backend` unless a future issue explicitly revives it.
 
 ## Commands
 
