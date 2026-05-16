@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, use } from "react";
-import { Search, Sparkles, AlertCircle, Settings } from "lucide-react";
+import { Sparkles, AlertCircle, Settings } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,12 +18,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { StepContainer } from "@/components/workflow/step-container";
 import { StepNavigation } from "@/components/workflow/step-navigation";
 import { LLMProgressPanel, LLMStatus } from "@/components/workflow/llm-progress-panel";
+import { SourcesPanel } from "@/components/workflow/sources-panel";
 import { useProjectStore } from "@/stores/project-store";
 import { useSettingsStore } from "@/stores/settings-store";
 import { useLLM } from "@/hooks/useLLM";
 import { cn } from "@/lib/utils";
 import { RESEARCH_SYSTEM_PROMPT, getResearchPrompt } from "@/lib/llm/prompts";
 import { debug } from "@/lib/debug";
+import { extractClaimsFromMarkdown } from "@/lib/research/claims";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -31,9 +33,9 @@ interface PageProps {
 
 export default function ResearchPage({ params }: PageProps) {
   const { id } = use(params);
-  const { currentProject, saveResearchData } = useProjectStore();
+  const { currentProject, saveResearchData, loadProject } = useProjectStore();
   const { hasValidLLMConfig, llmProvider } = useSettingsStore();
-  const { streamResearch, isStreaming } = useLLM();
+  const { streamResearch } = useLLM();
 
   const [topic, setTopic] = useState("");
   const [depth, setDepth] = useState<"quick" | "detailed" | "comprehensive">("detailed");
@@ -105,6 +107,17 @@ export default function ResearchPage({ params }: PageProps) {
           content: fullContent,
           sources: extractSources(fullContent),
         });
+        // Persist claims separately so the outline step can cite them
+        const projectSources = currentProject?.sources ?? [];
+        const extracted = extractClaimsFromMarkdown(fullContent, projectSources);
+        if (extracted.length > 0) {
+          await fetch(`/api/projects/${id}/claims`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ items: extracted }),
+          });
+          await loadProject(id);
+        }
         debug.log("workflow", "Auto-save complete");
       } catch (error) {
         debug.error("workflow", `Auto-save failed: ${(error as Error).message}`);
@@ -233,6 +246,14 @@ export default function ResearchPage({ params }: PageProps) {
               </Select>
             </div>
           </div>
+
+          {/* Sources + claims (issue #4) */}
+          <SourcesPanel
+            projectId={id}
+            sources={currentProject?.sources ?? []}
+            claims={currentProject?.claims ?? []}
+            onChange={() => loadProject(id)}
+          />
 
           {/* LLM Progress Panel */}
           <LLMProgressPanel
