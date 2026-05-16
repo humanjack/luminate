@@ -1,4 +1,9 @@
-# Luminate Backend
+# Luminate Backend (frozen / legacy)
+
+> **⚠️ Frozen as of issue #7.** Next.js is the canonical MVP API runtime — see
+> [`../docs/runtime-boundary.md`](../docs/runtime-boundary.md). This directory
+> is kept for reference (multi-provider LLM streaming sketches, alternate
+> SQLAlchemy schema) and is not in scope for MVP issues.
 
 Python backend for Luminate YouTube video automation, built with FastAPI and LangChain.
 
