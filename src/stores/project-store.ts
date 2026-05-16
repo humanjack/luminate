@@ -1,6 +1,18 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { Project, ResearchData, ContentData, Slide, Script, Recording, AnalysisResult, Video } from "@/lib/db/schema";
+import type {
+  Project,
+  ResearchData,
+  ContentData,
+  Slide,
+  Script,
+  Recording,
+  AnalysisResult,
+  Video,
+  Source,
+  Claim,
+  OutlineItem,
+} from "@/lib/db/schema";
 import { debug } from "@/lib/debug";
 
 export interface ProjectWithData extends Project {
@@ -11,6 +23,9 @@ export interface ProjectWithData extends Project {
   recordings?: Recording[];
   analysisResults?: AnalysisResult[];
   videos?: Video[];
+  sources?: Source[];
+  claims?: Claim[];
+  outlineItems?: OutlineItem[];
 }
 
 interface ProjectState {
@@ -32,6 +47,9 @@ interface ProjectState {
 
   // Content data
   saveContentData: (projectId: string, data: Partial<ContentData>) => Promise<void>;
+
+  // Outline (issue #5)
+  saveOutline: (projectId: string, items: Partial<OutlineItem>[]) => Promise<OutlineItem[]>;
 
   // Slides
   saveSlides: (projectId: string, slides: Partial<Slide>[]) => Promise<void>;
@@ -197,6 +215,33 @@ export const useProjectStore = create<ProjectState>()(
         } catch (error) {
           debug.error("store", `saveContentData(${projectId}) failed: ${(error as Error).message}`);
           set({ error: (error as Error).message });
+        }
+      },
+
+      saveOutline: async (projectId: string, items: Partial<OutlineItem>[]) => {
+        debug.storeAction("project", "saveOutline", { projectId, count: items.length });
+        try {
+          const response = await fetch(`/api/projects/${projectId}/outline`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ items }),
+          });
+          debug.apiCall("POST", `/api/projects/${projectId}/outline`, response.status);
+          if (!response.ok) {
+            const detail = await response.text();
+            throw new Error(`Failed to save outline: ${response.status} ${detail}`);
+          }
+          const saved = (await response.json()) as OutlineItem[];
+          set((state) => ({
+            currentProject: state.currentProject?.id === projectId
+              ? { ...state.currentProject, outlineItems: saved }
+              : state.currentProject,
+          }));
+          return saved;
+        } catch (error) {
+          debug.error("store", `saveOutline failed: ${(error as Error).message}`);
+          set({ error: (error as Error).message });
+          throw error;
         }
       },
 
