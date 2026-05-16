@@ -50,6 +50,8 @@ export function initializeDatabase() {
       markdown TEXT NOT NULL,
       image_data TEXT,
       theme TEXT DEFAULT 'default',
+      source_refs TEXT,
+      outline_item_id TEXT,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL
     );
@@ -62,6 +64,7 @@ export function initializeDatabase() {
       text TEXT NOT NULL,
       speaker_notes TEXT,
       estimated_duration INTEGER,
+      source_refs TEXT,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL
     );
@@ -109,6 +112,65 @@ export function initializeDatabase() {
       updated_at INTEGER NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS sources (
+      id TEXT PRIMARY KEY,
+      project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+      type TEXT NOT NULL CHECK(type IN ('url', 'text', 'manual')),
+      url TEXT,
+      title TEXT,
+      author TEXT,
+      published_at TEXT,
+      fetched_text TEXT,
+      status TEXT NOT NULL DEFAULT 'pending'
+        CHECK(status IN ('pending', 'fetched', 'approved', 'rejected', 'failed')),
+      trust_notes TEXT,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS claims (
+      id TEXT PRIMARY KEY,
+      project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+      text TEXT NOT NULL,
+      source_ids TEXT NOT NULL DEFAULT '[]',
+      pinned INTEGER NOT NULL DEFAULT 0,
+      status TEXT NOT NULL DEFAULT 'proposed'
+        CHECK(status IN ('proposed', 'approved', 'rejected')),
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS outline_items (
+      id TEXT PRIMARY KEY,
+      project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+      "index" INTEGER NOT NULL,
+      title TEXT NOT NULL,
+      summary TEXT,
+      speaker_goal TEXT,
+      claim_ids TEXT NOT NULL DEFAULT '[]',
+      approved INTEGER NOT NULL DEFAULT 0,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS exports (
+      id TEXT PRIMARY KEY,
+      project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+      video_id TEXT REFERENCES videos(id) ON DELETE SET NULL,
+      status TEXT NOT NULL DEFAULT 'pending'
+        CHECK(status IN ('pending', 'rendering', 'encoding', 'completed', 'failed')),
+      progress INTEGER NOT NULL DEFAULT 0,
+      resolution TEXT NOT NULL DEFAULT '1920x1080',
+      output_path TEXT,
+      captions_path TEXT,
+      transcript_path TEXT,
+      sources_path TEXT,
+      duration REAL,
+      error_message TEXT,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+
     CREATE TABLE IF NOT EXISTS settings (
       key TEXT PRIMARY KEY,
       value TEXT,
@@ -123,7 +185,30 @@ export function initializeDatabase() {
     CREATE INDEX IF NOT EXISTS idx_recordings_project ON recordings(project_id);
     CREATE INDEX IF NOT EXISTS idx_analysis_project ON analysis_results(project_id);
     CREATE INDEX IF NOT EXISTS idx_videos_project ON videos(project_id);
+    CREATE INDEX IF NOT EXISTS idx_sources_project ON sources(project_id);
+    CREATE INDEX IF NOT EXISTS idx_claims_project ON claims(project_id);
+    CREATE INDEX IF NOT EXISTS idx_outline_items_project ON outline_items(project_id);
+    CREATE INDEX IF NOT EXISTS idx_exports_project ON exports(project_id);
   `);
 
+  // Idempotent column adds for existing databases
+  applyColumnIfMissing(sqlite, "slides", "source_refs", "TEXT");
+  applyColumnIfMissing(sqlite, "slides", "outline_item_id", "TEXT");
+  applyColumnIfMissing(sqlite, "scripts", "source_refs", "TEXT");
+
   sqlite.close();
+}
+
+function applyColumnIfMissing(
+  sqlite: Database.Database,
+  table: string,
+  column: string,
+  type: string
+) {
+  const cols = sqlite
+    .prepare(`PRAGMA table_info(${table})`)
+    .all() as Array<{ name: string }>;
+  if (!cols.some((c) => c.name === column)) {
+    sqlite.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${type};`);
+  }
 }
