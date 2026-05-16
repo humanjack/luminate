@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef, use } from "react";
-import { Play, Pause, Download, Upload, ChevronLeft, ChevronRight, Film, Youtube } from "lucide-react";
+import { useState, useEffect, useRef, use, useMemo } from "react";
+import { Play, Pause, Download, Upload, Film, Youtube } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,10 +23,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { StepContainer } from "@/components/workflow/step-container";
+import { ReadinessPanel } from "@/components/workflow/readiness-panel";
 import { useProjectStore } from "@/stores/project-store";
 import { useSettingsStore } from "@/stores/settings-store";
 import { formatDuration } from "@/lib/utils";
 import { cn } from "@/lib/utils";
+import { computeReadiness } from "@/lib/readiness";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -51,12 +53,26 @@ export default function VideoPage({ params }: PageProps) {
 
   const playbackRef = useRef<NodeJS.Timeout | null>(null);
 
-  const slides = currentProject?.slides || [];
-  const scripts = currentProject?.scripts || [];
-  const recordings = currentProject?.recordings || [];
+  const slides = useMemo(() => currentProject?.slides || [], [currentProject?.slides]);
+  const scripts = useMemo(() => currentProject?.scripts || [], [currentProject?.scripts]);
+  const recordings = useMemo(() => currentProject?.recordings || [], [currentProject?.recordings]);
+  const outlineItems = useMemo(() => currentProject?.outlineItems || [], [currentProject?.outlineItems]);
+  const claims = useMemo(() => currentProject?.claims || [], [currentProject?.claims]);
 
   // Calculate total duration
   const totalDuration = recordings.reduce((sum, r) => sum + (r.duration || 0), 0);
+
+  const readiness = useMemo(
+    () =>
+      computeReadiness({
+        slides,
+        scripts,
+        recordings,
+        outlineItems,
+        claims,
+      }),
+    [slides, scripts, recordings, outlineItems, claims]
+  );
 
   // Simulate video preview playback
   useEffect(() => {
@@ -89,6 +105,10 @@ export default function VideoPage({ params }: PageProps) {
   }, [isPlaying, totalDuration, recordings]);
 
   const handleExport = async () => {
+    if (!readiness.canExport) {
+      // Defensive — UI also disables the button. Don't even hit saveVideo.
+      return;
+    }
     setExportStatus("preparing");
     setExportProgress(0);
 
@@ -187,7 +207,8 @@ export default function VideoPage({ params }: PageProps) {
           </div>
         }
       >
-        <div className="flex-1 p-6">
+        <div className="flex-1 p-6 space-y-6">
+          <ReadinessPanel projectId={id} report={readiness} />
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
             {/* Preview */}
             <div className="lg:col-span-2 space-y-4">
@@ -312,10 +333,15 @@ export default function VideoPage({ params }: PageProps) {
                       className="w-full"
                       size="lg"
                       onClick={handleExport}
-                      disabled={slides.length === 0 || recordings.length === 0}
+                      disabled={!readiness.canExport}
+                      data-testid="export-button"
                     >
                       <Film className="h-4 w-4 mr-2" />
-                      Export Video
+                      {readiness.canExport
+                        ? "Export Video"
+                        : `Fix ${readiness.totals.errors} issue${
+                            readiness.totals.errors === 1 ? "" : "s"
+                          } to export`}
                     </Button>
                   )}
 
@@ -414,11 +440,11 @@ export default function VideoPage({ params }: PageProps) {
           <div className="py-4">
             {youtubeConnected ? (
               <p className="text-sm text-muted-foreground">
-                You're connected to YouTube. Click upload to publish your video.
+                You&apos;re connected to YouTube. Click upload to publish your video.
               </p>
             ) : (
               <p className="text-sm text-muted-foreground">
-                You'll be redirected to YouTube Studio to upload your video manually.
+                You&apos;ll be redirected to YouTube Studio to upload your video manually.
               </p>
             )}
           </div>
