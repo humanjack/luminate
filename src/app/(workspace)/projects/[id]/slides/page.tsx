@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, use } from "react";
-import { ChevronLeft, ChevronRight, Palette, Download, Image } from "lucide-react";
+import { ChevronLeft, ChevronRight, Palette } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -15,6 +15,8 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { StepContainer } from "@/components/workflow/step-container";
 import { StepNavigation } from "@/components/workflow/step-navigation";
+import { SlideCanvas } from "@/components/workflow/slide-canvas";
+import { SLIDE_THEMES, type SlideTheme } from "@/lib/slides/themes";
 import { useProjectStore } from "@/stores/project-store";
 import { cn } from "@/lib/utils";
 import { debug } from "@/lib/debug";
@@ -36,7 +38,7 @@ export default function SlidesPage({ params }: PageProps) {
 
   const [slides, setSlides] = useState<SlideData[]>([]);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
-  const [theme, setTheme] = useState("default");
+  const [theme, setTheme] = useState<SlideTheme>("default");
   const [isSaving, setIsSaving] = useState(false);
 
   // Parse slides from content markdown
@@ -57,8 +59,9 @@ export default function SlidesPage({ params }: PageProps) {
           theme: s.theme || "default",
         }))
       );
-      if (currentProject.slides[0]?.theme) {
-        setTheme(currentProject.slides[0].theme);
+      const t = currentProject.slides[0]?.theme;
+      if (t && (SLIDE_THEMES as readonly string[]).includes(t)) {
+        setTheme(t as SlideTheme);
       }
     } else if (currentProject?.contentData?.markdown) {
       // Parse from content markdown
@@ -124,39 +127,6 @@ export default function SlidesPage({ params }: PageProps) {
     }
   };
 
-  // Simple slide preview renderer
-  const renderSlidePreview = (markdown: string) => {
-    return (
-      <div
-        className={cn(
-          "aspect-video rounded-lg p-8 flex flex-col justify-center",
-          theme === "default" && "bg-gradient-to-br from-primary/10 to-primary/5 border",
-          theme === "dark" && "bg-slate-900 text-white border border-slate-700",
-          theme === "light" && "bg-white text-slate-900 border shadow-lg",
-          theme === "minimal" && "bg-gray-50 text-gray-900 border"
-        )}
-      >
-        <div
-          className="prose prose-sm max-w-none dark:prose-invert"
-          dangerouslySetInnerHTML={{
-            __html: markdown
-              .replace(/^# (.+)$/gm, '<h1 class="text-3xl font-bold mb-4">$1</h1>')
-              .replace(/^## (.+)$/gm, '<h2 class="text-2xl font-semibold mb-3">$1</h2>')
-              .replace(/^### (.+)$/gm, '<h3 class="text-xl font-medium mb-2">$1</h3>')
-              .replace(/^- (.+)$/gm, '<li class="ml-4">$1</li>')
-              .replace(/^(\d+)\. (.+)$/gm, '<li class="ml-4">$2</li>')
-              .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-              .replace(/\*(.+?)\*/g, "<em>$1</em>")
-              .replace(/`(.+?)`/g, '<code class="bg-muted px-1 rounded">$1</code>')
-              .replace(/<!--[\s\S]*?-->/g, "") // Remove HTML comments
-              .replace(/\n\n/g, "</p><p>")
-              .replace(/\n/g, "<br />"),
-          }}
-        />
-      </div>
-    );
-  };
-
   return (
     <div className="flex flex-col h-full overflow-hidden">
       <StepContainer
@@ -167,15 +137,14 @@ export default function SlidesPage({ params }: PageProps) {
         actions={
           <div className="flex items-center gap-2">
             <Palette className="h-4 w-4 text-muted-foreground" />
-            <Select value={theme} onValueChange={setTheme}>
+            <Select value={theme} onValueChange={(v) => setTheme(v as SlideTheme)}>
               <SelectTrigger className="w-32">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="default">Default</SelectItem>
                 <SelectItem value="dark">Dark</SelectItem>
-                <SelectItem value="light">Light</SelectItem>
-                <SelectItem value="minimal">Minimal</SelectItem>
+                <SelectItem value="playful">Playful</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -211,28 +180,38 @@ export default function SlidesPage({ params }: PageProps) {
               </div>
 
               {currentSlide ? (
-                renderSlidePreview(currentSlide.markdown)
+                <SlideCanvas
+                  markdown={currentSlide.markdown}
+                  theme={theme}
+                  variant="preview"
+                />
               ) : (
                 <div className="aspect-video rounded-lg border bg-muted flex items-center justify-center">
                   <p className="text-muted-foreground">No slides to display</p>
                 </div>
               )}
 
-              {/* Slide Thumbnails */}
-              <div className="flex gap-2 overflow-x-auto pb-2">
+              {/* Visual thumbnail rail */}
+              <div className="flex gap-2 overflow-x-auto pb-2" data-testid="slide-thumbnail-rail">
                 {slides.map((slide, index) => (
                   <button
-                    key={index}
+                    key={slide.id ?? index}
                     onClick={() => setCurrentSlideIndex(index)}
+                    aria-label={`Jump to slide ${index + 1}`}
                     className={cn(
-                      "flex-shrink-0 w-24 h-16 rounded border overflow-hidden",
+                      "flex-shrink-0 w-32 rounded transition focus:outline-none",
                       index === currentSlideIndex
-                        ? "ring-2 ring-primary"
-                        : "hover:border-primary/50"
+                        ? "ring-2 ring-indigo-500"
+                        : "opacity-80 hover:opacity-100"
                     )}
                   >
-                    <div className="w-full h-full bg-muted text-[6px] p-1 overflow-hidden">
-                      {slide.markdown.slice(0, 100)}...
+                    <SlideCanvas
+                      markdown={slide.markdown}
+                      theme={theme}
+                      variant="thumbnail"
+                    />
+                    <div className="text-[10px] text-muted-foreground text-center mt-1">
+                      {index + 1}
                     </div>
                   </button>
                 ))}

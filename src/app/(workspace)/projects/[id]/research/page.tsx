@@ -252,7 +252,9 @@ export default function ResearchPage({ params }: PageProps) {
             projectId={id}
             sources={currentProject?.sources ?? []}
             claims={currentProject?.claims ?? []}
-            onChange={() => loadProject(id)}
+            onChange={() => {
+              void loadProject(id);
+            }}
           />
 
           {/* LLM Progress Panel */}

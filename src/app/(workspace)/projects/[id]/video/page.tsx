@@ -206,7 +206,7 @@ export default function VideoPage({ params }: PageProps) {
           <div className="flex items-center gap-2">
             {exportStatus === "complete" && (
               <>
-                <Button variant="outline" onClick={handleDownload}>
+                <Button variant="outline" onClick={() => handleDownload()}>
                   <Download className="h-4 w-4 mr-2" />
                   Download
                 </Button>
