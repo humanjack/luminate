@@ -26,6 +26,7 @@ import { StepContainer } from "@/components/workflow/step-container";
 import { ReadinessPanel } from "@/components/workflow/readiness-panel";
 import { SeoCopilotPanel } from "@/components/workflow/seo-copilot-panel";
 import { ThumbnailPicker } from "@/components/workflow/thumbnail-picker";
+import { ClipExtractor } from "@/components/workflow/clip-extractor";
 import { useProjectStore } from "@/stores/project-store";
 import { useSettingsStore } from "@/stores/settings-store";
 import { formatDuration } from "@/lib/utils";
@@ -225,6 +226,7 @@ export default function VideoPage({ params }: PageProps) {
           <ReadinessPanel projectId={id} report={readiness} />
           <SeoCopilotPanel projectId={id} />
           <ThumbnailPicker projectId={id} />
+          <ClipExtractor projectId={id} />
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
             {/* Preview */}
             <div className="lg:col-span-2 space-y-4">

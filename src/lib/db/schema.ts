@@ -255,6 +255,21 @@ export const thumbnails = sqliteTable("thumbnails", {
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });
 
+// Short-clip suggestions extracted from a rendered video (S6)
+export const clipSuggestions = sqliteTable("clip_suggestions", {
+  id: text("id").primaryKey(),
+  projectId: text("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  startSec: real("start_sec").notNull(),
+  endSec: real("end_sec").notNull(),
+  hook: text("hook").notNull(),
+  viralityScore: integer("virality_score").notNull(),
+  reasoning: text("reasoning"),
+  status: text("status", {
+    enum: ["suggested", "kept", "discarded"],
+  }).notNull().default("suggested"),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+});
+
 // Relations
 export const projectsRelations = relations(projects, ({ one, many }) => ({
   researchData: one(researchData),
@@ -400,6 +415,8 @@ export type VideoMetadata = typeof videoMetadata.$inferSelect;
 export type NewVideoMetadata = typeof videoMetadata.$inferInsert;
 export type Thumbnail = typeof thumbnails.$inferSelect;
 export type NewThumbnail = typeof thumbnails.$inferInsert;
+export type ClipSuggestion = typeof clipSuggestions.$inferSelect;
+export type NewClipSuggestion = typeof clipSuggestions.$inferInsert;
 
 export const agentRunsRelations = relations(agentRuns, ({ one, many }) => ({
   project: one(projects, {
@@ -426,6 +443,13 @@ export const videoMetadataRelations = relations(videoMetadata, ({ one }) => ({
 export const thumbnailsRelations = relations(thumbnails, ({ one }) => ({
   project: one(projects, {
     fields: [thumbnails.projectId],
+    references: [projects.id],
+  }),
+}));
+
+export const clipSuggestionsRelations = relations(clipSuggestions, ({ one }) => ({
+  project: one(projects, {
+    fields: [clipSuggestions.projectId],
     references: [projects.id],
   }),
 }));
