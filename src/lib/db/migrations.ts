@@ -177,6 +177,38 @@ export function initializeDatabase() {
       updated_at INTEGER NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS agent_runs (
+      id TEXT PRIMARY KEY,
+      project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+      status TEXT NOT NULL DEFAULT 'idle'
+        CHECK(status IN ('idle', 'running', 'paused', 'completed', 'error', 'cancelled')),
+      from_step TEXT NOT NULL,
+      to_step TEXT NOT NULL,
+      current_step TEXT,
+      model TEXT NOT NULL,
+      input_tokens INTEGER NOT NULL DEFAULT 0,
+      output_tokens INTEGER NOT NULL DEFAULT 0,
+      cost_usd REAL NOT NULL DEFAULT 0,
+      error_message TEXT,
+      started_at INTEGER NOT NULL,
+      completed_at INTEGER
+    );
+
+    CREATE TABLE IF NOT EXISTS agent_steps (
+      id TEXT PRIMARY KEY,
+      run_id TEXT NOT NULL REFERENCES agent_runs(id) ON DELETE CASCADE,
+      step TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending'
+        CHECK(status IN ('pending', 'running', 'completed', 'error', 'skipped')),
+      input_tokens INTEGER NOT NULL DEFAULT 0,
+      output_tokens INTEGER NOT NULL DEFAULT 0,
+      cost_usd REAL NOT NULL DEFAULT 0,
+      duration_ms INTEGER,
+      error_message TEXT,
+      started_at INTEGER,
+      completed_at INTEGER
+    );
+
     -- Create indexes for better performance
     CREATE INDEX IF NOT EXISTS idx_research_project ON research_data(project_id);
     CREATE INDEX IF NOT EXISTS idx_content_project ON content_data(project_id);
@@ -189,6 +221,8 @@ export function initializeDatabase() {
     CREATE INDEX IF NOT EXISTS idx_claims_project ON claims(project_id);
     CREATE INDEX IF NOT EXISTS idx_outline_items_project ON outline_items(project_id);
     CREATE INDEX IF NOT EXISTS idx_exports_project ON exports(project_id);
+    CREATE INDEX IF NOT EXISTS idx_agent_runs_project ON agent_runs(project_id);
+    CREATE INDEX IF NOT EXISTS idx_agent_steps_run ON agent_steps(run_id);
   `);
 
   // Idempotent column adds for existing databases

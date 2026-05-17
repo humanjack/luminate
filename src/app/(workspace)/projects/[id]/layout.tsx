@@ -6,6 +6,7 @@ import Link from "next/link";
 import { ArrowLeft, Settings, MoreVertical, Trash2, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { WorkflowStepper } from "@/components/workflow/workflow-stepper";
+import { AgentRunPanel } from "@/components/workflow/agent-run-panel";
 import { useProjectStore } from "@/stores/project-store";
 import { useWorkflowStore } from "@/stores/workflow-store";
 import { debug } from "@/lib/debug";
@@ -127,6 +128,9 @@ export default function ProjectLayout({ children, params }: ProjectLayoutProps) 
 
       {/* Main content */}
       <main className="flex-1 overflow-hidden">{children}</main>
+
+      {/* Floating AI agent panel (S1) */}
+      <AgentRunPanel projectId={id} />
 
       {/* Rename Dialog */}
       <Dialog open={isRenameOpen} onOpenChange={setIsRenameOpen}>
