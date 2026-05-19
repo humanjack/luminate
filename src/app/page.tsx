@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, FolderOpen, Settings, Video, Sparkles } from "lucide-react";
+import { Plus, FolderOpen, Settings, Video, Sparkles, Gauge } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useProjectStore } from "@/stores/project-store";
@@ -40,7 +40,7 @@ export default function HomePage() {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto mb-16">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 max-w-5xl mx-auto mb-16">
           <Card
             className="cursor-pointer hover:border-primary transition-colors"
             onClick={handleCreateProject}
@@ -58,6 +58,16 @@ export default function HomePage() {
                 <FolderOpen className="h-12 w-12 mx-auto text-primary mb-2" />
                 <CardTitle>All Projects</CardTitle>
                 <CardDescription>Browse and manage your projects</CardDescription>
+              </CardHeader>
+            </Card>
+          </Link>
+
+          <Link href="/dashboard">
+            <Card className="cursor-pointer hover:border-primary transition-colors h-full">
+              <CardHeader className="text-center">
+                <Gauge className="h-12 w-12 mx-auto text-primary mb-2" />
+                <CardTitle>Dashboard</CardTitle>
+                <CardDescription>Pipeline health & throughput at a glance</CardDescription>
               </CardHeader>
             </Card>
           </Link>
