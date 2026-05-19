@@ -177,6 +177,7 @@ export function initializeDatabase() {
       updated_at INTEGER NOT NULL
     );
 
+<<<<<<< HEAD
     CREATE TABLE IF NOT EXISTS agent_runs (
       id TEXT PRIMARY KEY,
       project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
@@ -220,6 +221,16 @@ export function initializeDatabase() {
       updated_at INTEGER NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS thumbnails (
+      id TEXT PRIMARY KEY,
+      project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+      preset TEXT NOT NULL
+        CHECK(preset IN ('bold-text', 'question', 'numbered-list', 'reaction')),
+      svg TEXT NOT NULL,
+      selected INTEGER NOT NULL DEFAULT 0,
+      created_at INTEGER NOT NULL
+    );
+
     -- Create indexes for better performance
     CREATE INDEX IF NOT EXISTS idx_research_project ON research_data(project_id);
     CREATE INDEX IF NOT EXISTS idx_content_project ON content_data(project_id);
@@ -235,6 +246,7 @@ export function initializeDatabase() {
     CREATE INDEX IF NOT EXISTS idx_agent_runs_project ON agent_runs(project_id);
     CREATE INDEX IF NOT EXISTS idx_agent_steps_run ON agent_steps(run_id);
     CREATE INDEX IF NOT EXISTS idx_video_metadata_project ON video_metadata(project_id);
+    CREATE INDEX IF NOT EXISTS idx_thumbnails_project ON thumbnails(project_id);
   `);
 
   // Idempotent column adds for existing databases
