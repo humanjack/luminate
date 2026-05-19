@@ -177,7 +177,6 @@ export function initializeDatabase() {
       updated_at INTEGER NOT NULL
     );
 
-<<<<<<< HEAD
     CREATE TABLE IF NOT EXISTS agent_runs (
       id TEXT PRIMARY KEY,
       project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
@@ -231,6 +230,19 @@ export function initializeDatabase() {
       created_at INTEGER NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS clip_suggestions (
+      id TEXT PRIMARY KEY,
+      project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+      start_sec REAL NOT NULL,
+      end_sec REAL NOT NULL,
+      hook TEXT NOT NULL,
+      virality_score INTEGER NOT NULL,
+      reasoning TEXT,
+      status TEXT NOT NULL DEFAULT 'suggested'
+        CHECK(status IN ('suggested', 'kept', 'discarded')),
+      created_at INTEGER NOT NULL
+    );
+
     -- Create indexes for better performance
     CREATE INDEX IF NOT EXISTS idx_research_project ON research_data(project_id);
     CREATE INDEX IF NOT EXISTS idx_content_project ON content_data(project_id);
@@ -247,6 +259,7 @@ export function initializeDatabase() {
     CREATE INDEX IF NOT EXISTS idx_agent_steps_run ON agent_steps(run_id);
     CREATE INDEX IF NOT EXISTS idx_video_metadata_project ON video_metadata(project_id);
     CREATE INDEX IF NOT EXISTS idx_thumbnails_project ON thumbnails(project_id);
+    CREATE INDEX IF NOT EXISTS idx_clip_suggestions_project ON clip_suggestions(project_id);
   `);
 
   // Idempotent column adds for existing databases
