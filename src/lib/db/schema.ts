@@ -193,6 +193,42 @@ export const settings = sqliteTable("settings", {
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });
 
+// Agent runs - one row per AI-orchestrated pipeline execution
+export const agentRuns = sqliteTable("agent_runs", {
+  id: text("id").primaryKey(),
+  projectId: text("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  status: text("status", {
+    enum: ["idle", "running", "paused", "completed", "error", "cancelled"],
+  }).notNull().default("idle"),
+  fromStep: text("from_step").notNull(),
+  toStep: text("to_step").notNull(),
+  currentStep: text("current_step"),
+  model: text("model").notNull(),
+  inputTokens: integer("input_tokens").notNull().default(0),
+  outputTokens: integer("output_tokens").notNull().default(0),
+  costUsd: real("cost_usd").notNull().default(0),
+  errorMessage: text("error_message"),
+  startedAt: integer("started_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+  completedAt: integer("completed_at", { mode: "timestamp" }),
+});
+
+// Per-step record inside an agent run
+export const agentSteps = sqliteTable("agent_steps", {
+  id: text("id").primaryKey(),
+  runId: text("run_id").notNull().references(() => agentRuns.id, { onDelete: "cascade" }),
+  step: text("step").notNull(),
+  status: text("status", {
+    enum: ["pending", "running", "completed", "error", "skipped"],
+  }).notNull().default("pending"),
+  inputTokens: integer("input_tokens").notNull().default(0),
+  outputTokens: integer("output_tokens").notNull().default(0),
+  costUsd: real("cost_usd").notNull().default(0),
+  durationMs: integer("duration_ms"),
+  errorMessage: text("error_message"),
+  startedAt: integer("started_at", { mode: "timestamp" }),
+  completedAt: integer("completed_at", { mode: "timestamp" }),
+});
+
 // Relations
 export const projectsRelations = relations(projects, ({ one, many }) => ({
   researchData: one(researchData),
@@ -330,3 +366,22 @@ export type NewOutlineItem = typeof outlineItems.$inferInsert;
 export type Export = typeof exports.$inferSelect;
 export type NewExport = typeof exports.$inferInsert;
 export type Setting = typeof settings.$inferSelect;
+export type AgentRun = typeof agentRuns.$inferSelect;
+export type NewAgentRun = typeof agentRuns.$inferInsert;
+export type AgentStep = typeof agentSteps.$inferSelect;
+export type NewAgentStep = typeof agentSteps.$inferInsert;
+
+export const agentRunsRelations = relations(agentRuns, ({ one, many }) => ({
+  project: one(projects, {
+    fields: [agentRuns.projectId],
+    references: [projects.id],
+  }),
+  steps: many(agentSteps),
+}));
+
+export const agentStepsRelations = relations(agentSteps, ({ one }) => ({
+  run: one(agentRuns, {
+    fields: [agentSteps.runId],
+    references: [agentRuns.id],
+  }),
+}));
