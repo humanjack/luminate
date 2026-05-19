@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Progress } from "@/components/ui/progress";
 import { StepContainer } from "@/components/workflow/step-container";
 import { StepNavigation } from "@/components/workflow/step-navigation";
+import { PracticePanel } from "@/components/workflow/practice-panel";
 import { useProjectStore } from "@/stores/project-store";
 import { useSettingsStore } from "@/stores/settings-store";
 import { cn } from "@/lib/utils";
@@ -217,6 +218,21 @@ export default function AnalysisPage({ params }: PageProps) {
               </CardContent>
             </Card>
           ) : (
+            <div className="space-y-6">
+              {(() => {
+                const script = currentProject?.scripts?.find(
+                  (s) => s.slideIndex === currentSlideIndex
+                );
+                const recording = currentProject?.recordings?.[currentSlideIndex];
+                return (
+                  <PracticePanel
+                    scriptText={script?.text}
+                    fillerWords={currentAnalysis?.fillerWords ?? []}
+                    waveform={(recording?.waveformData as number[] | undefined) ?? null}
+                    durationSec={recording?.duration ?? null}
+                  />
+                );
+              })()}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Score Overview */}
               <div className="space-y-4">
@@ -393,6 +409,7 @@ export default function AnalysisPage({ params }: PageProps) {
                   </CardContent>
                 </Card>
               </div>
+            </div>
             </div>
           )}
         </div>
