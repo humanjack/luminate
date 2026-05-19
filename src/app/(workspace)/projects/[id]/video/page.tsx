@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { StepContainer } from "@/components/workflow/step-container";
 import { ReadinessPanel } from "@/components/workflow/readiness-panel";
+import { SeoCopilotPanel } from "@/components/workflow/seo-copilot-panel";
 import { useProjectStore } from "@/stores/project-store";
 import { useSettingsStore } from "@/stores/settings-store";
 import { formatDuration } from "@/lib/utils";
@@ -221,6 +222,7 @@ export default function VideoPage({ params }: PageProps) {
       >
         <div className="flex-1 p-6 space-y-6">
           <ReadinessPanel projectId={id} report={readiness} />
+          <SeoCopilotPanel projectId={id} />
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
             {/* Preview */}
             <div className="lg:col-span-2 space-y-4">

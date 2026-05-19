@@ -209,6 +209,17 @@ export function initializeDatabase() {
       completed_at INTEGER
     );
 
+    CREATE TABLE IF NOT EXISTS video_metadata (
+      id TEXT PRIMARY KEY,
+      project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+      titles TEXT NOT NULL DEFAULT '[]',
+      selected_title_index INTEGER NOT NULL DEFAULT 0,
+      description TEXT,
+      tags TEXT NOT NULL DEFAULT '[]',
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+
     -- Create indexes for better performance
     CREATE INDEX IF NOT EXISTS idx_research_project ON research_data(project_id);
     CREATE INDEX IF NOT EXISTS idx_content_project ON content_data(project_id);
@@ -223,6 +234,7 @@ export function initializeDatabase() {
     CREATE INDEX IF NOT EXISTS idx_exports_project ON exports(project_id);
     CREATE INDEX IF NOT EXISTS idx_agent_runs_project ON agent_runs(project_id);
     CREATE INDEX IF NOT EXISTS idx_agent_steps_run ON agent_steps(run_id);
+    CREATE INDEX IF NOT EXISTS idx_video_metadata_project ON video_metadata(project_id);
   `);
 
   // Idempotent column adds for existing databases
