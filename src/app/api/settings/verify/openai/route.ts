@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8000";
-
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -14,21 +12,31 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // First, save the API key to backend
-    await fetch(`${BACKEND_URL}/api/settings`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ openaiApiKey: apiKey }),
+    const response = await fetch("https://api.openai.com/v1/models", {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+      },
     });
 
-    // Then verify via backend
-    const response = await fetch(`${BACKEND_URL}/api/settings/verify/openai`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-    });
+    if (response.ok) {
+      return NextResponse.json({ valid: true });
+    }
 
-    const result = await response.json();
-    return NextResponse.json(result);
+    let errorMessage = `Invalid API key (HTTP ${response.status})`;
+    try {
+      const errorBody = await response.json();
+      if (errorBody?.error?.message) {
+        errorMessage = errorBody.error.message;
+      }
+    } catch {
+      // ignore JSON parse errors
+    }
+
+    return NextResponse.json({
+      valid: false,
+      error: errorMessage,
+    });
   } catch (error: any) {
     console.error("[Verify OpenAI] Error:", error);
     return NextResponse.json({
