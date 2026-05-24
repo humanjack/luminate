@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Key, Mic, Video, Palette, Save, CheckCircle, XCircle, Loader2, AlertCircle } from "lucide-react";
+import { ArrowLeft, Key, Mic, Video, Palette, Save, CheckCircle, XCircle, Loader2, AlertCircle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,6 +28,37 @@ interface VerificationResult {
   message?: string;
   warning?: string;
 }
+
+interface ModelOption {
+  id: string;
+  label: string;
+}
+
+const DEFAULT_ANTHROPIC_MODELS: ModelOption[] = [
+  { id: "claude-opus-4-5-20251101", label: "Claude Opus 4.5" },
+  { id: "claude-sonnet-4-5-20250514", label: "Claude Sonnet 4.5" },
+  { id: "claude-haiku-4-5-20251101", label: "Claude Haiku 4.5" },
+  { id: "claude-3-7-sonnet-20250224", label: "Claude 3.7 Sonnet" },
+];
+
+const DEFAULT_OPENAI_MODELS: ModelOption[] = [
+  { id: "gpt-5.2", label: "GPT-5.2" },
+  { id: "gpt-4.1", label: "GPT-4.1" },
+  { id: "gpt-4.1-mini", label: "GPT-4.1 Mini" },
+  { id: "gpt-4.1-nano", label: "GPT-4.1 Nano" },
+  { id: "o3", label: "O3" },
+  { id: "o4-mini", label: "O4 Mini" },
+  { id: "gpt-4o", label: "GPT-4o (Legacy)" },
+];
+
+const DEFAULT_GOOGLE_MODELS: ModelOption[] = [
+  { id: "gemini-3-pro-preview", label: "Gemini 3 Pro" },
+  { id: "gemini-3-flash-preview", label: "Gemini 3 Flash" },
+  { id: "gemini-2.5-flash", label: "Gemini 2.5 Flash" },
+  { id: "gemini-2.5-pro", label: "Gemini 2.5 Pro" },
+  { id: "gemini-2.5-flash-lite", label: "Gemini 2.5 Flash Lite" },
+  { id: "gemini-2.0-flash", label: "Gemini 2.0 Flash (Legacy)" },
+];
 
 export default function SettingsPage() {
   const { toast } = useToast();
@@ -77,6 +108,12 @@ export default function SettingsPage() {
   const [claudeCliVerification, setClaudeCliVerification] = useState<VerificationResult>({ status: "idle" });
   const [speechSuperVerification, setSpeechSuperVerification] = useState<VerificationResult>({ status: "idle" });
   const [elsaVerification, setElsaVerification] = useState<VerificationResult>({ status: "idle" });
+
+  // Model lists (populated on Refresh; falls back to defaults until then)
+  const [anthropicModels, setAnthropicModels] = useState<ModelOption[]>(DEFAULT_ANTHROPIC_MODELS);
+  const [openaiModels, setOpenaiModels] = useState<ModelOption[]>(DEFAULT_OPENAI_MODELS);
+  const [googleModels, setGoogleModels] = useState<ModelOption[]>(DEFAULT_GOOGLE_MODELS);
+  const [refreshingProvider, setRefreshingProvider] = useState<null | "anthropic" | "openai" | "google">(null);
 
   useEffect(() => {
     loadSettings();
@@ -308,6 +345,80 @@ export default function SettingsPage() {
     }
   };
 
+  const refreshModels = async (provider: "anthropic" | "openai" | "google") => {
+    const apiKey =
+      provider === "anthropic"
+        ? anthropicApiKey
+        : provider === "openai"
+          ? openaiApiKey
+          : googleApiKey;
+
+    if (!apiKey) {
+      toast({
+        title: "API key required",
+        description: "Enter an API key first, then refresh.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setRefreshingProvider(provider);
+    try {
+      const response = await fetch(`/api/settings/models/${provider}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ apiKey }),
+      });
+      const result = await response.json();
+
+      if (!result.ok) {
+        toast({
+          title: "Failed to refresh models",
+          description: result.error || "Unknown error",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const fetched: ModelOption[] = (result.models as Array<string | ModelOption>).map((m) =>
+        typeof m === "string" ? { id: m, label: m } : m,
+      );
+
+      if (fetched.length === 0) {
+        toast({
+          title: "No models returned",
+          description: "The provider returned an empty model list.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (provider === "anthropic") {
+        setAnthropicModels(fetched);
+        if (!fetched.some((m) => m.id === claudeModel)) setClaudeModel(fetched[0].id);
+      } else if (provider === "openai") {
+        setOpenaiModels(fetched);
+        if (!fetched.some((m) => m.id === openaiModel)) setOpenAIModel(fetched[0].id);
+      } else {
+        setGoogleModels(fetched);
+        if (!fetched.some((m) => m.id === googleModel)) setGoogleModel(fetched[0].id);
+      }
+
+      toast({
+        title: "Models updated",
+        description: `Loaded ${fetched.length} model${fetched.length === 1 ? "" : "s"} from ${provider}.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Failed to refresh models",
+        description: error?.message || "Unknown error",
+        variant: "destructive",
+      });
+    } finally {
+      setRefreshingProvider(null);
+    }
+  };
+
   // Verification status component
   const VerificationBadge = ({ result }: { result: VerificationResult }) => {
     if (result.status === "idle") return null;
@@ -456,16 +567,33 @@ export default function SettingsPage() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label>Model</Label>
+                      <div className="flex items-center justify-between">
+                        <Label>Model</Label>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => refreshModels("anthropic")}
+                          disabled={!anthropicApiKey || refreshingProvider === "anthropic"}
+                        >
+                          {refreshingProvider === "anthropic" ? (
+                            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                          ) : (
+                            <RefreshCw className="h-3 w-3 mr-1" />
+                          )}
+                          Refresh
+                        </Button>
+                      </div>
                       <Select value={claudeModel} onValueChange={setClaudeModel}>
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="claude-opus-4-5-20251101">Claude Opus 4.5</SelectItem>
-                          <SelectItem value="claude-sonnet-4-5-20250514">Claude Sonnet 4.5</SelectItem>
-                          <SelectItem value="claude-haiku-4-5-20251101">Claude Haiku 4.5</SelectItem>
-                          <SelectItem value="claude-3-7-sonnet-20250224">Claude 3.7 Sonnet</SelectItem>
+                          {anthropicModels.map((m) => (
+                            <SelectItem key={m.id} value={m.id}>
+                              {m.label}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
@@ -512,19 +640,33 @@ export default function SettingsPage() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label>Model</Label>
+                      <div className="flex items-center justify-between">
+                        <Label>Model</Label>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => refreshModels("openai")}
+                          disabled={!openaiApiKey || refreshingProvider === "openai"}
+                        >
+                          {refreshingProvider === "openai" ? (
+                            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                          ) : (
+                            <RefreshCw className="h-3 w-3 mr-1" />
+                          )}
+                          Refresh
+                        </Button>
+                      </div>
                       <Select value={openaiModel} onValueChange={setOpenAIModel}>
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="gpt-5.2">GPT-5.2</SelectItem>
-                          <SelectItem value="gpt-4.1">GPT-4.1</SelectItem>
-                          <SelectItem value="gpt-4.1-mini">GPT-4.1 Mini</SelectItem>
-                          <SelectItem value="gpt-4.1-nano">GPT-4.1 Nano</SelectItem>
-                          <SelectItem value="o3">O3</SelectItem>
-                          <SelectItem value="o4-mini">O4 Mini</SelectItem>
-                          <SelectItem value="gpt-4o">GPT-4o (Legacy)</SelectItem>
+                          {openaiModels.map((m) => (
+                            <SelectItem key={m.id} value={m.id}>
+                              {m.label}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
@@ -571,18 +713,33 @@ export default function SettingsPage() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label>Model</Label>
+                      <div className="flex items-center justify-between">
+                        <Label>Model</Label>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => refreshModels("google")}
+                          disabled={!googleApiKey || refreshingProvider === "google"}
+                        >
+                          {refreshingProvider === "google" ? (
+                            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                          ) : (
+                            <RefreshCw className="h-3 w-3 mr-1" />
+                          )}
+                          Refresh
+                        </Button>
+                      </div>
                       <Select value={googleModel} onValueChange={setGoogleModel}>
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="gemini-3-pro-preview">Gemini 3 Pro</SelectItem>
-                          <SelectItem value="gemini-3-flash-preview">Gemini 3 Flash</SelectItem>
-                          <SelectItem value="gemini-2.5-flash">Gemini 2.5 Flash</SelectItem>
-                          <SelectItem value="gemini-2.5-pro">Gemini 2.5 Pro</SelectItem>
-                          <SelectItem value="gemini-2.5-flash-lite">Gemini 2.5 Flash Lite</SelectItem>
-                          <SelectItem value="gemini-2.0-flash">Gemini 2.0 Flash (Legacy)</SelectItem>
+                          {googleModels.map((m) => (
+                            <SelectItem key={m.id} value={m.id}>
+                              {m.label}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
