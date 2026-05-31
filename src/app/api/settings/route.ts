@@ -2,7 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { db, settings } from "@/lib/db";
 import { eq } from "drizzle-orm";
 
-const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8000";
+// Python backend is optional (see CLAUDE.md — Next.js is the canonical MVP runtime).
+// Defaults to localhost:8000 for users running both frontend + backend; sync is
+// silently skipped when the backend isn't reachable. Set BACKEND_URL="" to disable entirely.
+const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:8000";
+
+function isConnRefused(err: unknown): boolean {
+  const cause = (err as { cause?: { code?: string }; code?: string })?.cause;
+  return cause?.code === "ECONNREFUSED" || (err as { code?: string })?.code === "ECONNREFUSED";
+}
 
 // GET /api/settings - Get all settings (from local DB + sync with backend)
 export async function GET() {
@@ -70,8 +78,7 @@ export async function POST(request: NextRequest) {
       Object.entries(llmSettings).filter(([_, v]) => v !== undefined)
     );
 
-    if (Object.keys(filteredSettings).length > 0) {
-      console.log(`[Settings] Syncing to backend: ${BACKEND_URL}/api/settings`);
+    if (BACKEND_URL && Object.keys(filteredSettings).length > 0) {
       try {
         await fetch(`${BACKEND_URL}/api/settings`, {
           method: "POST",
@@ -79,7 +86,12 @@ export async function POST(request: NextRequest) {
           body: JSON.stringify(filteredSettings),
         });
       } catch (backendError) {
-        console.error("[Settings] Failed to sync to backend:", backendError);
+        if (isConnRefused(backendError)) {
+          // Backend not running — expected when user is frontend-only. Quiet warning.
+          console.warn(`[Settings] Backend unreachable at ${BACKEND_URL}, skipping sync.`);
+        } else {
+          console.error("[Settings] Failed to sync to backend:", backendError);
+        }
         // Don't fail the request if backend sync fails
       }
     }

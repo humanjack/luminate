@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
 export type LLMProvider = "anthropic" | "openai" | "google" | "claude-cli";
-export type SpeechProvider = "speechsuper" | "elsa";
+export type SpeechProvider = "speechsuper" | "elsa" | "azure" | "openai";
 
 interface SettingsState {
   // LLM Settings
@@ -19,6 +19,8 @@ interface SettingsState {
   speechSuperApiKey: string;
   speechSuperAppId: string;
   elsaApiKey: string;
+  azureSpeechKey: string;
+  azureSpeechRegion: string;
 
   // YouTube Settings
   youtubeConnected: boolean;
@@ -50,6 +52,7 @@ interface SettingsState {
   setSpeechProvider: (provider: SpeechProvider) => void;
   setSpeechSuperCredentials: (apiKey: string, appId: string) => void;
   setElsaApiKey: (key: string) => void;
+  setAzureSpeechCredentials: (key: string, region: string) => void;
   setYouTubeConnection: (connected: boolean, channelName?: string) => void;
   setTheme: (theme: "light" | "dark" | "system") => void;
   setAutoSave: (enabled: boolean, interval?: number) => void;
@@ -78,6 +81,8 @@ export const useSettingsStore = create<SettingsState>()(
       speechSuperApiKey: "",
       speechSuperAppId: "",
       elsaApiKey: "",
+      azureSpeechKey: "",
+      azureSpeechRegion: "eastus",
 
       // YouTube Settings
       youtubeConnected: false,
@@ -121,6 +126,11 @@ export const useSettingsStore = create<SettingsState>()(
       }),
 
       setElsaApiKey: (key) => set({ elsaApiKey: key }),
+
+      setAzureSpeechCredentials: (key, region) => set({
+        azureSpeechKey: key,
+        azureSpeechRegion: region,
+      }),
 
       setYouTubeConnection: (connected, channelName) => set({
         youtubeConnected: connected,
@@ -168,6 +178,8 @@ export const useSettingsStore = create<SettingsState>()(
               speechSuperApiKey: state.speechSuperApiKey,
               speechSuperAppId: state.speechSuperAppId,
               elsaApiKey: state.elsaApiKey,
+              azureSpeechKey: state.azureSpeechKey,
+              azureSpeechRegion: state.azureSpeechRegion,
               theme: state.theme,
               autoSave: state.autoSave,
               autoSaveInterval: state.autoSaveInterval,
@@ -204,7 +216,16 @@ export const useSettingsStore = create<SettingsState>()(
         if (state.speechProvider === "speechsuper") {
           return (state.speechSuperApiKey?.length ?? 0) > 0 && (state.speechSuperAppId?.length ?? 0) > 0;
         }
-        return (state.elsaApiKey?.length ?? 0) > 0;
+        if (state.speechProvider === "elsa") {
+          return (state.elsaApiKey?.length ?? 0) > 0;
+        }
+        if (state.speechProvider === "azure") {
+          return (state.azureSpeechKey?.length ?? 0) > 0 && (state.azureSpeechRegion?.length ?? 0) > 0;
+        }
+        if (state.speechProvider === "openai") {
+          return (state.openaiApiKey?.length ?? 0) > 0;
+        }
+        return false;
       },
     }),
     {
@@ -221,6 +242,8 @@ export const useSettingsStore = create<SettingsState>()(
         speechSuperApiKey: state.speechSuperApiKey,
         speechSuperAppId: state.speechSuperAppId,
         elsaApiKey: state.elsaApiKey,
+        azureSpeechKey: state.azureSpeechKey,
+        azureSpeechRegion: state.azureSpeechRegion,
         theme: state.theme,
         autoSave: state.autoSave,
         autoSaveInterval: state.autoSaveInterval,

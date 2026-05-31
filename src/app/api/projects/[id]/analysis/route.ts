@@ -30,6 +30,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         fillerWords: body.fillerWords,
         segments: body.segments,
         recommendations: body.recommendations,
+        transcript: body.transcript ?? null,
+        diff: body.diff ?? null,
+        provider: body.provider ?? null,
         createdAt: now,
       })
       .returning();

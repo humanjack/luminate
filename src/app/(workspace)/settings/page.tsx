@@ -74,6 +74,8 @@ export default function SettingsPage() {
     speechSuperApiKey,
     speechSuperAppId,
     elsaApiKey,
+    azureSpeechKey,
+    azureSpeechRegion,
     theme,
     autoSave,
     autoSaveInterval,
@@ -93,6 +95,7 @@ export default function SettingsPage() {
     setSpeechProvider,
     setSpeechSuperCredentials,
     setElsaApiKey,
+    setAzureSpeechCredentials,
     setTheme,
     setAutoSave,
     setRecordingPreferences,
@@ -108,6 +111,7 @@ export default function SettingsPage() {
   const [claudeCliVerification, setClaudeCliVerification] = useState<VerificationResult>({ status: "idle" });
   const [speechSuperVerification, setSpeechSuperVerification] = useState<VerificationResult>({ status: "idle" });
   const [elsaVerification, setElsaVerification] = useState<VerificationResult>({ status: "idle" });
+  const [azureVerification, setAzureVerification] = useState<VerificationResult>({ status: "idle" });
 
   // Model lists (populated on Refresh; falls back to defaults until then)
   const [anthropicModels, setAnthropicModels] = useState<ModelOption[]>(DEFAULT_ANTHROPIC_MODELS);
@@ -342,6 +346,34 @@ export default function SettingsPage() {
         status: "invalid",
         message: "Failed to verify API key",
       });
+    }
+  };
+
+  const verifyAzure = async () => {
+    if (!azureSpeechKey || !azureSpeechRegion) {
+      setAzureVerification({ status: "invalid", message: "Please enter both API key and region" });
+      return;
+    }
+
+    setAzureVerification({ status: "verifying" });
+
+    try {
+      const response = await fetch("/api/settings/verify/azure-speech", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ apiKey: azureSpeechKey, region: azureSpeechRegion }),
+      });
+
+      const result = await response.json();
+
+      if (result.valid) {
+        setAzureVerification({ status: "valid", message: result.message || "Azure credentials valid" });
+        toast({ title: "Verified", description: result.message || "Azure Speech credentials are valid!" });
+      } else {
+        setAzureVerification({ status: "invalid", message: result.error || "Invalid credentials" });
+      }
+    } catch (error) {
+      setAzureVerification({ status: "invalid", message: "Failed to verify Azure credentials" });
     }
   };
 
@@ -790,19 +822,91 @@ export default function SettingsPage() {
                       setSpeechProvider(v as any);
                       setSpeechSuperVerification({ status: "idle" });
                       setElsaVerification({ status: "idle" });
+                      setAzureVerification({ status: "idle" });
                     }}
                   >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="azure">Azure Pronunciation Assessment (free tier)</SelectItem>
+                      <SelectItem value="openai">OpenAI Transcript Comparison</SelectItem>
                       <SelectItem value="speechsuper">SpeechSuper</SelectItem>
                       <SelectItem value="elsa">ELSA</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
-                {speechProvider === "speechsuper" ? (
+                {speechProvider === "azure" ? (
+                  <>
+                    <div className="space-y-2">
+                      <Label>Azure Speech Key</Label>
+                      <Input
+                        type="password"
+                        placeholder="Your Azure Speech subscription key"
+                        value={azureSpeechKey}
+                        onChange={(e) => {
+                          setAzureSpeechCredentials(e.target.value, azureSpeechRegion);
+                          setAzureVerification({ status: "idle" });
+                        }}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Azure Region</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="e.g. eastus, westeurope"
+                          value={azureSpeechRegion}
+                          onChange={(e) => {
+                            setAzureSpeechCredentials(azureSpeechKey, e.target.value);
+                            setAzureVerification({ status: "idle" });
+                          }}
+                          className="flex-1"
+                        />
+                        <Button
+                          variant="outline"
+                          onClick={verifyAzure}
+                          disabled={azureVerification.status === "verifying"}
+                        >
+                          {azureVerification.status === "verifying" ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            "Verify"
+                          )}
+                        </Button>
+                      </div>
+                      <VerificationBadge result={azureVerification} />
+                      <p className="text-xs text-muted-foreground">
+                        Get a free key at{" "}
+                        <a
+                          href="https://portal.azure.com/#create/Microsoft.CognitiveServicesSpeechServices"
+                          target="_blank"
+                          rel="noreferrer"
+                          className="underline"
+                        >
+                          Azure Portal
+                        </a>{" "}
+                        — F0 (free) tier includes 5 audio hours/month.
+                      </p>
+                    </div>
+                  </>
+                ) : speechProvider === "openai" ? (
+                  <div className="space-y-2">
+                    <p className="text-sm text-muted-foreground">
+                      Uses your OpenAI API key from the LLM section above. Transcribes recordings with{" "}
+                      <code className="bg-muted px-1 rounded">gpt-4o-mini-transcribe</code> and compares
+                      against the script.
+                    </p>
+                    {!openaiApiKey && (
+                      <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-md p-3 text-sm">
+                        <p className="flex items-center gap-2 text-yellow-600">
+                          <AlertCircle className="h-4 w-4" />
+                          No OpenAI API key configured. Set it in the LLM section above.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                ) : speechProvider === "speechsuper" ? (
                   <>
                     <div className="space-y-2">
                       <Label>SpeechSuper API Key</Label>

@@ -99,6 +99,14 @@ export const analysisResults = sqliteTable("analysis_results", {
     phonemes?: Array<{ phoneme: string; score: number }>;
   }>>(),
   recommendations: text("recommendations", { mode: "json" }).$type<string[]>(),
+  transcript: text("transcript"),
+  diff: text("diff", { mode: "json" }).$type<Array<{
+    type: "match" | "missing" | "extra" | "substitution";
+    scriptWord?: string;
+    transcriptWord?: string;
+    timestamp?: number;
+  }>>(),
+  provider: text("provider"),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });
 

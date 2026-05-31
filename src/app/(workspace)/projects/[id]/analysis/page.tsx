@@ -19,6 +19,12 @@ interface PageProps {
   params: Promise<{ id: string }>;
 }
 
+type DiffOp =
+  | { type: "match"; scriptWord: string; transcriptWord: string; timestamp?: number }
+  | { type: "missing"; scriptWord: string }
+  | { type: "extra"; transcriptWord: string; timestamp?: number }
+  | { type: "substitution"; scriptWord: string; transcriptWord: string; timestamp?: number };
+
 interface AnalysisData {
   recordingId: string;
   slideIndex: number;
@@ -30,7 +36,17 @@ interface AnalysisData {
   wordsPerMinute: number;
   fillerWords: Array<{ word: string; count: number; timestamps: number[] }>;
   recommendations: string[];
+  transcript?: string;
+  diff?: DiffOp[];
+  provider?: string;
 }
+
+const PROVIDER_LABELS: Record<string, string> = {
+  azure: "Azure Pronunciation",
+  openai: "OpenAI Transcript",
+  speechsuper: "SpeechSuper",
+  elsa: "ELSA",
+};
 
 export default function AnalysisPage({ params }: PageProps) {
   const { id } = use(params);
@@ -60,6 +76,9 @@ export default function AnalysisPage({ params }: PageProps) {
           wordsPerMinute: a.wordsPerMinute || 0,
           fillerWords: (a.fillerWords as any) || [],
           recommendations: (a.recommendations as any) || [],
+          transcript: (a as any).transcript || undefined,
+          diff: ((a as any).diff as DiffOp[] | null) || undefined,
+          provider: (a as any).provider || undefined,
         }))
       );
     }
@@ -83,38 +102,36 @@ export default function AnalysisPage({ params }: PageProps) {
         }),
       });
 
-      if (response.ok) {
-        const result = await response.json();
-
-        const analysisData: AnalysisData = {
-          recordingId: recording.id,
-          slideIndex: index,
-          overallScore: result.overallScore || Math.random() * 20 + 80,
-          pronunciationScore: result.pronunciationScore || Math.random() * 20 + 75,
-          fluencyScore: result.fluencyScore || Math.random() * 20 + 75,
-          confidenceScore: result.confidenceScore || Math.random() * 20 + 70,
-          naturalnessScore: result.naturalnessScore || Math.random() * 20 + 75,
-          wordsPerMinute: result.wordsPerMinute || 120 + Math.random() * 40,
-          fillerWords: result.fillerWords || [
-            { word: "um", count: Math.floor(Math.random() * 5), timestamps: [] },
-            { word: "uh", count: Math.floor(Math.random() * 3), timestamps: [] },
-          ],
-          recommendations: result.recommendations || [
-            "Good pacing overall",
-            "Consider reducing filler words",
-            "Clear pronunciation on technical terms",
-          ],
-        };
-
-        setAnalyses((prev) => {
-          const newAnalyses = [...prev];
-          newAnalyses[index] = analysisData;
-          return newAnalyses;
-        });
-
-        // Save to backend
-        await saveAnalysisResult(recording.id, id, analysisData);
+      const result = await response.json();
+      if (!response.ok) {
+        console.error("Analysis API error:", result?.error || response.statusText);
+        return;
       }
+
+      const analysisData: AnalysisData = {
+        recordingId: recording.id,
+        slideIndex: index,
+        overallScore: result.overallScore ?? 0,
+        pronunciationScore: result.pronunciationScore ?? 0,
+        fluencyScore: result.fluencyScore ?? 0,
+        confidenceScore: result.confidenceScore ?? 0,
+        naturalnessScore: result.naturalnessScore ?? 0,
+        wordsPerMinute: result.wordsPerMinute ?? 0,
+        fillerWords: result.fillerWords ?? [],
+        recommendations: result.recommendations ?? [],
+        transcript: result.transcript,
+        diff: result.diff,
+        provider: result.provider,
+      };
+
+      setAnalyses((prev) => {
+        const newAnalyses = [...prev];
+        newAnalyses[index] = analysisData;
+        return newAnalyses;
+      });
+
+      // Save to backend
+      await saveAnalysisResult(recording.id, id, analysisData);
     } catch (error) {
       console.error("Analysis failed:", error);
     } finally {
@@ -170,7 +187,7 @@ export default function AnalysisPage({ params }: PageProps) {
         actions={
           <div className="flex items-center gap-4">
             <span className="text-sm text-muted-foreground">
-              Using: {speechProvider === "speechsuper" ? "SpeechSuper" : "ELSA"}
+              Using: {PROVIDER_LABELS[speechProvider] || speechProvider}
             </span>
             <Button
               variant="outline"
@@ -191,7 +208,7 @@ export default function AnalysisPage({ params }: PageProps) {
                 <div className="flex-1">
                   <p className="font-medium">Speech API not configured</p>
                   <p className="text-sm text-muted-foreground">
-                    Configure your SpeechSuper or ELSA API key in settings for pronunciation analysis.
+                    Configure Azure Speech (free tier), OpenAI, SpeechSuper, or ELSA in settings.
                     Mock data will be used for now.
                   </p>
                 </div>
@@ -339,6 +356,73 @@ export default function AnalysisPage({ params }: PageProps) {
               <div className="space-y-4">
                 {currentAnalysis && (
                   <>
+                    {/* Transcript vs Script */}
+                    {(currentAnalysis.transcript || (currentAnalysis.diff && currentAnalysis.diff.length > 0)) && (
+                      <Card>
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-sm">Transcript vs Script</CardTitle>
+                          <CardDescription className="text-xs">
+                            Green = match, yellow = substituted, red = missing, gray strikethrough = extra
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                          {currentAnalysis.diff && currentAnalysis.diff.length > 0 ? (
+                            <div className="text-sm leading-7 flex flex-wrap gap-x-1.5 gap-y-1">
+                              {currentAnalysis.diff.map((op, i) => {
+                                if (op.type === "match") {
+                                  return (
+                                    <span key={i} className="text-foreground">
+                                      {op.scriptWord}
+                                    </span>
+                                  );
+                                }
+                                if (op.type === "substitution") {
+                                  return (
+                                    <span
+                                      key={i}
+                                      className="px-1 rounded bg-yellow-500/20 text-yellow-700 dark:text-yellow-400"
+                                      title={`Heard: "${op.transcriptWord}"`}
+                                    >
+                                      {op.scriptWord}
+                                      <span className="text-xs opacity-70"> ({op.transcriptWord})</span>
+                                    </span>
+                                  );
+                                }
+                                if (op.type === "missing") {
+                                  return (
+                                    <span
+                                      key={i}
+                                      className="px-1 rounded bg-red-500/20 text-red-700 dark:text-red-400 line-through"
+                                      title="Skipped"
+                                    >
+                                      {op.scriptWord}
+                                    </span>
+                                  );
+                                }
+                                return (
+                                  <span
+                                    key={i}
+                                    className="px-1 rounded bg-muted text-muted-foreground italic"
+                                    title="Extra word"
+                                  >
+                                    +{op.transcriptWord}
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            <p className="text-sm text-muted-foreground italic">{currentAnalysis.transcript}</p>
+                          )}
+                          {currentAnalysis.transcript && currentAnalysis.diff && currentAnalysis.diff.length > 0 && (
+                            <details className="text-xs text-muted-foreground">
+                              <summary className="cursor-pointer hover:text-foreground">Full transcript</summary>
+                              <p className="mt-2 italic">{currentAnalysis.transcript}</p>
+                            </details>
+                          )}
+                        </CardContent>
+                      </Card>
+                    )}
+
                     {/* Filler Words */}
                     <Card>
                       <CardHeader className="pb-2">
