@@ -115,6 +115,51 @@ Structure the final brief as:
 Every factual claim must carry an inline [title](url) citation to a source you actually retrieved. Do not use placeholder URLs. Make the content engaging and suitable for video narration.`;
 }
 
+// --- Multi-agent research (Phase 4, #48) -------------------------------------
+
+export const SUBAGENT_SYSTEM_PROMPT = `You are a research subagent investigating ONE sub-question for a larger report.
+Use the web_search tool to find real, current sources. Write a concise, factual summary (a few paragraphs) of what you found, with inline [title](https://real-url) citations to sources you actually retrieved. Never invent or use placeholder URLs. Stay focused on your assigned sub-question.`;
+
+export function getSubagentPrompt(topic: string, subQuestion: string): string {
+  return `Overall topic: "${topic}"
+Your sub-question: "${subQuestion}"
+
+Search the web and write a concise, well-sourced summary answering ONLY this sub-question. Cite every factual claim inline with a real [title](url) link.`;
+}
+
+export const SYNTHESIS_SYSTEM_PROMPT = `You are a research writer combining findings from multiple parallel research efforts into one cohesive brief.
+Preserve the inline [title](url) citations exactly as they appear in the findings. Never invent, alter, or use placeholder URLs. Write in clear markdown suitable for video narration.`;
+
+export function getSynthesisPrompt(
+  topic: string,
+  depth: "quick" | "detailed" | "comprehensive",
+  findings: Array<{ subQuestion: string; summary: string }>
+): string {
+  const depthInstructions = {
+    quick: "about 300-500 words",
+    detailed: "about 800-1200 words with multiple sections",
+    comprehensive: "about 1500-2500 words with extensive detail, examples, and multiple perspectives",
+  };
+
+  const blocks = findings
+    .map((f, i) => `### Sub-question ${i + 1}: ${f.subQuestion}\n${f.summary}`)
+    .join("\n\n");
+
+  return `Synthesize the following research findings into one cohesive YouTube video research brief on "${topic}" (${depthInstructions[depth]}).
+
+Findings from parallel research:
+${blocks}
+
+Write a single cohesive brief (not a Q&A list) structured as:
+1. **Key Points** - bulleted takeaways
+2. **Introduction** - context and why it matters
+3. **Main Content** - detailed exploration
+4. **Practical Applications** - how viewers can apply this
+5. **Sources** - the real URLs cited
+
+Preserve the inline [title](url) citations from the findings — do NOT invent new URLs or use placeholders. Keep only citations that appeared in the findings above. Make it engaging and suitable for narration.`;
+}
+
 export function getContentPrompt(
   research: string,
   format: "presentation" | "tutorial" | "explainer",
