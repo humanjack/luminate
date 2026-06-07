@@ -326,6 +326,33 @@ describe("useSettingsStore", () => {
       expect(useSettingsStore.getState().theme).toBe("dark");
     });
 
+    it("should not overwrite string defaults with null values from the API", async () => {
+      // Empty-string settings round-trip through the DB as null (the GET route does
+      // `JSON.parse(value || "null")`). Those nulls must not clobber the store's
+      // string defaults, or controlled inputs become null-valued (React warning).
+      const mockSettings = {
+        speechSuperApiKey: null,
+        speechSuperAppId: null,
+        elsaApiKey: null,
+        theme: "dark",
+      };
+
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(mockSettings),
+      });
+
+      await useSettingsStore.getState().loadSettings();
+
+      const state = useSettingsStore.getState();
+      // Nulls dropped — defaults preserved.
+      expect(state.speechSuperApiKey).toBe("");
+      expect(state.speechSuperAppId).toBe("");
+      expect(state.elsaApiKey).toBe("");
+      // Non-null values still applied.
+      expect(state.theme).toBe("dark");
+    });
+
     it("should handle API errors gracefully", async () => {
       global.fetch = vi.fn().mockResolvedValue({
         ok: false,
