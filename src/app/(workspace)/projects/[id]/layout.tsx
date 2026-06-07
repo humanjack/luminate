@@ -42,18 +42,28 @@ export default function ProjectLayout({ children, params }: ProjectLayoutProps) 
   const [isRenameOpen, setIsRenameOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [newName, setNewName] = useState("");
+  const [notFound, setNotFound] = useState(false);
 
   // Load project on mount and reload on step navigation to ensure fresh data
   useEffect(() => {
     debug.log("workflow", `Layout: Loading project ${id}, pathname: ${pathname}`);
+    let cancelled = false;
+    setNotFound(false);
     loadProject(id).then((project) => {
+      if (cancelled) return;
       if (project) {
         debug.log("workflow", `Layout: Project loaded - scripts: ${project.scripts?.length || 0}, slides: ${project.slides?.length || 0}`);
         setMaxCompletedStep((project.currentStep - 1) as any);
         setCurrentStep(project.currentStep as any);
         setNewName(project.name);
+      } else {
+        // Project couldn't be loaded (deleted, or a stale id from persisted state).
+        setNotFound(true);
       }
     });
+    return () => {
+      cancelled = true;
+    };
   }, [id, pathname, loadProject, setMaxCompletedStep, setCurrentStep]);
 
   const handleRename = async () => {
@@ -68,7 +78,28 @@ export default function ProjectLayout({ children, params }: ProjectLayoutProps) 
     router.push("/projects");
   };
 
-  if (!currentProject) {
+  if (notFound) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen gap-4">
+        <div className="text-center">
+          <h1 className="text-xl font-semibold">Project not found</h1>
+          <p className="text-sm text-muted-foreground">
+            This project may have been deleted or is no longer available.
+          </p>
+        </div>
+        <Link href="/projects">
+          <Button variant="outline">
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Projects
+          </Button>
+        </Link>
+      </div>
+    );
+  }
+
+  // While a new project id is loading, currentProject may still hold the previous
+  // project — guard on the id so we don't briefly render stale data under a new URL.
+  if (!currentProject || currentProject.id !== id) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="animate-pulse text-muted-foreground">Loading project...</div>
