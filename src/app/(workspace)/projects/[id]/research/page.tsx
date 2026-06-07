@@ -19,6 +19,11 @@ import { StepContainer } from "@/components/workflow/step-container";
 import { StepNavigation } from "@/components/workflow/step-navigation";
 import { LLMProgressPanel, LLMStatus } from "@/components/workflow/llm-progress-panel";
 import { SourcesPanel } from "@/components/workflow/sources-panel";
+import {
+  TrustSummary,
+  type TrustSummaryData,
+  type ClaimVerdict,
+} from "@/components/workflow/trust-summary";
 import { useProjectStore } from "@/stores/project-store";
 import { useSettingsStore } from "@/stores/settings-store";
 import { useLLM } from "@/hooks/useLLM";
@@ -48,6 +53,11 @@ export default function ResearchPage({ params }: PageProps) {
   const [llmError, setLlmError] = useState<string>("");
   const [researchPhase, setResearchPhase] = useState<string>("");
 
+  // Citation grounding (Phase 3)
+  const [trustSummary, setTrustSummary] = useState<TrustSummaryData | null>(null);
+  const [verdicts, setVerdicts] = useState<ClaimVerdict[]>([]);
+  const [isVerifying, setIsVerifying] = useState(false);
+
   // Load existing research data
   useEffect(() => {
     if (currentProject?.researchData) {
@@ -65,6 +75,8 @@ export default function ResearchPage({ params }: PageProps) {
     setLlmError("");
     setStreamingOutput("");
     setResearchPhase("");
+    setTrustSummary(null);
+    setVerdicts([]);
 
     // Set the prompt for display
     const userPrompt = getResearchPrompt(topic, depth);
@@ -129,12 +141,35 @@ export default function ResearchPage({ params }: PageProps) {
           });
         }
         await loadProject(id);
+
+        // Grounded run → verify citations automatically (Phase 3).
+        if (groundedSources.length > 0 && extracted.length > 0) {
+          await runVerification();
+        }
       } catch (error) {
         console.error(`Auto-save failed: ${(error as Error).message}`);
       }
     }
     setResearchPhase("");
     setIsGenerating(false);
+  };
+
+  const runVerification = async () => {
+    setIsVerifying(true);
+    try {
+      const res = await fetch(`/api/projects/${id}/claims/verify`, { method: "POST" });
+      if (!res.ok) {
+        console.error(`Verification failed: HTTP ${res.status}`);
+        return;
+      }
+      const data = await res.json();
+      setTrustSummary(data.summary ?? null);
+      setVerdicts(data.verdicts ?? []);
+    } catch (error) {
+      console.error(`Verification error: ${(error as Error).message}`);
+    } finally {
+      setIsVerifying(false);
+    }
   };
 
   /**
@@ -300,6 +335,17 @@ export default function ResearchPage({ params }: PageProps) {
             onChange={() => {
               void loadProject(id);
             }}
+          />
+
+          {/* Citation grounding / verification (Phase 3) */}
+          <TrustSummary
+            summary={trustSummary}
+            verdicts={verdicts}
+            claimText={Object.fromEntries(
+              (currentProject?.claims ?? []).map((c) => [c.id, c.text])
+            )}
+            isVerifying={isVerifying}
+            onVerify={runVerification}
           />
 
           {/* LLM Progress Panel */}
