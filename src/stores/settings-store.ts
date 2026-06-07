@@ -153,7 +153,15 @@ export const useSettingsStore = create<SettingsState>()(
           const response = await fetch("/api/settings");
           if (response.ok) {
             const settings = await response.json();
-            set(settings);
+            // Drop null/undefined so server values never clobber the store's typed
+            // (string) defaults. Empty-string settings round-trip through the DB as
+            // null (`JSON.parse("" || "null")`), which would otherwise make the
+            // controlled inputs null-valued and trip React's "value should not be
+            // null" warning.
+            const clean = Object.fromEntries(
+              Object.entries(settings).filter(([, value]) => value !== null && value !== undefined)
+            );
+            set(clean);
           }
         } catch (error) {
           console.error("Failed to load settings:", error);
