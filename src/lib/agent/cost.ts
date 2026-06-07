@@ -7,15 +7,19 @@ export interface ModelPricing {
 }
 
 export const MODEL_PRICING: Record<string, ModelPricing> = {
-  // Anthropic
-  "claude-sonnet-4-5-20250514": { inputPer1M: 3.0, outputPer1M: 15.0 },
+  // Anthropic (per platform.claude.com pricing)
+  "claude-opus-4-8": { inputPer1M: 5.0, outputPer1M: 25.0 },
+  "claude-opus-4-7": { inputPer1M: 5.0, outputPer1M: 25.0 },
   "claude-sonnet-4-6": { inputPer1M: 3.0, outputPer1M: 15.0 },
-  "claude-opus-4-7": { inputPer1M: 15.0, outputPer1M: 75.0 },
-  "claude-haiku-4-5-20251001": { inputPer1M: 0.8, outputPer1M: 4.0 },
-  // OpenAI
+  "claude-haiku-4-5": { inputPer1M: 1.0, outputPer1M: 5.0 },
+  // OpenAI (gpt-5.x pricing estimated — verify against current OpenAI pricing)
+  "gpt-5.5": { inputPer1M: 1.25, outputPer1M: 10.0 },
+  "gpt-5.2": { inputPer1M: 1.25, outputPer1M: 10.0 },
   "gpt-4.1": { inputPer1M: 2.0, outputPer1M: 8.0 },
   "gpt-4o": { inputPer1M: 2.5, outputPer1M: 10.0 },
-  // Google
+  // Google (Gemini 3 pricing estimated — verify against current Google pricing)
+  "gemini-3-pro-preview": { inputPer1M: 2.0, outputPer1M: 12.0 },
+  "gemini-3-flash-preview": { inputPer1M: 0.3, outputPer1M: 2.5 },
   "gemini-2.5-flash": { inputPer1M: 0.3, outputPer1M: 2.5 },
 };
 

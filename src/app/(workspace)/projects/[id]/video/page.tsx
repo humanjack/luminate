@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, use, useMemo } from "react";
-import { Play, Pause, Download, Upload, Film, Youtube } from "lucide-react";
+import { Play, Pause, Download, Upload, Film, MonitorPlay } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -214,7 +214,7 @@ export default function VideoPage({ params }: PageProps) {
                   Download
                 </Button>
                 <Button onClick={() => setShowYouTubeDialog(true)}>
-                  <Youtube className="h-4 w-4 mr-2" />
+                  <MonitorPlay className="h-4 w-4 mr-2" />
                   Upload to YouTube
                 </Button>
               </>
@@ -440,7 +440,7 @@ export default function VideoPage({ params }: PageProps) {
                         className="w-full"
                         onClick={() => setShowYouTubeDialog(true)}
                       >
-                        <Youtube className="h-4 w-4 mr-2" />
+                        <MonitorPlay className="h-4 w-4 mr-2" />
                         Upload to YouTube
                       </Button>
                     </div>

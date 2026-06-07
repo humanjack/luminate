@@ -181,9 +181,9 @@ backend/
 
 The backend supports **three LLM providers** through a unified LangChain interface:
 
-- **Anthropic Claude** - Default: `claude-sonnet-4-5-20250514`
-- **OpenAI GPT** - Default: `gpt-4o`
-- **Google Gemini** - Default: `gemini-2.0-flash-exp`
+- **Anthropic Claude** - Default: `claude-sonnet-4-6`
+- **OpenAI GPT** - Default: `gpt-5.5`
+- **Google Gemini** - Default: `gemini-3-pro-preview`
 
 All providers use the same streaming API pattern:
 

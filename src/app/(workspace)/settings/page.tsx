@@ -35,13 +35,14 @@ interface ModelOption {
 }
 
 const DEFAULT_ANTHROPIC_MODELS: ModelOption[] = [
-  { id: "claude-opus-4-5-20251101", label: "Claude Opus 4.5" },
-  { id: "claude-sonnet-4-5-20250514", label: "Claude Sonnet 4.5" },
-  { id: "claude-haiku-4-5-20251101", label: "Claude Haiku 4.5" },
-  { id: "claude-3-7-sonnet-20250224", label: "Claude 3.7 Sonnet" },
+  { id: "claude-opus-4-8", label: "Claude Opus 4.8" },
+  { id: "claude-opus-4-7", label: "Claude Opus 4.7" },
+  { id: "claude-sonnet-4-6", label: "Claude Sonnet 4.6" },
+  { id: "claude-haiku-4-5", label: "Claude Haiku 4.5" },
 ];
 
 const DEFAULT_OPENAI_MODELS: ModelOption[] = [
+  { id: "gpt-5.5", label: "GPT-5.5" },
   { id: "gpt-5.2", label: "GPT-5.2" },
   { id: "gpt-4.1", label: "GPT-4.1" },
   { id: "gpt-4.1-mini", label: "GPT-4.1 Mini" },
