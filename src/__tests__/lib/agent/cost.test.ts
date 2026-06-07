@@ -3,7 +3,7 @@ import { computeCost, formatCost, priceFor } from "@/lib/agent/cost";
 
 describe("agent/cost", () => {
   it("returns Anthropic pricing for known model", () => {
-    const price = priceFor("claude-sonnet-4-5-20250514");
+    const price = priceFor("claude-sonnet-4-6");
     expect(price.inputPer1M).toBe(3);
     expect(price.outputPer1M).toBe(15);
   });
@@ -15,13 +15,13 @@ describe("agent/cost", () => {
   });
 
   it("computes cost in USD using per-1M-token rates", () => {
-    // 1k input + 1k output on Sonnet 4.5 = 0.001*3 + 0.001*15 = $0.018
-    const cost = computeCost("claude-sonnet-4-5-20250514", 1000, 1000);
+    // 1k input + 1k output on Sonnet 4.6 = 0.001*3 + 0.001*15 = $0.018
+    const cost = computeCost("claude-sonnet-4-6", 1000, 1000);
     expect(cost).toBeCloseTo(0.018, 6);
   });
 
   it("computeCost handles zero tokens", () => {
-    expect(computeCost("claude-sonnet-4-5-20250514", 0, 0)).toBe(0);
+    expect(computeCost("claude-sonnet-4-6", 0, 0)).toBe(0);
   });
 
   it("formats sub-cent prices as fraction of a cent", () => {

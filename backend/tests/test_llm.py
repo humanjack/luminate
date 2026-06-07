@@ -9,9 +9,9 @@ def test_default_models():
     assert "anthropic" in DEFAULT_MODELS
     assert "openai" in DEFAULT_MODELS
     assert "google" in DEFAULT_MODELS
-    assert DEFAULT_MODELS["anthropic"] == "claude-sonnet-4-5-20250514"
-    assert DEFAULT_MODELS["openai"] == "gpt-4.1"
-    assert DEFAULT_MODELS["google"] == "gemini-2.5-flash"
+    assert DEFAULT_MODELS["anthropic"] == "claude-sonnet-4-6"
+    assert DEFAULT_MODELS["openai"] == "gpt-5.5"
+    assert DEFAULT_MODELS["google"] == "gemini-3-pro-preview"
 
 
 def test_llm_client_creation_anthropic():
@@ -46,9 +46,9 @@ def test_llm_client_custom_model():
     client = get_llm_client(
         provider="anthropic",
         api_key="test-key",
-        model="claude-opus-4-20241022"
+        model="claude-opus-4-8"
     )
-    assert client.model == "claude-opus-4-20241022"
+    assert client.model == "claude-opus-4-8"
 
 
 def test_llm_client_default_provider():

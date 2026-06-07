@@ -45,29 +45,29 @@ describe("LLM Provider Configuration", () => {
   describe("Default Models", () => {
     it("should have correct default model for anthropic", () => {
       const defaultModels = {
-        anthropic: "claude-sonnet-4-5-20250514",
-        openai: "gpt-4.1",
-        google: "gemini-2.5-flash",
+        anthropic: "claude-sonnet-4-6",
+        openai: "gpt-5.5",
+        google: "gemini-3-pro-preview",
       };
-      expect(defaultModels.anthropic).toBe("claude-sonnet-4-5-20250514");
+      expect(defaultModels.anthropic).toBe("claude-sonnet-4-6");
     });
 
     it("should have correct default model for openai", () => {
       const defaultModels = {
-        anthropic: "claude-sonnet-4-5-20250514",
-        openai: "gpt-4.1",
-        google: "gemini-2.5-flash",
+        anthropic: "claude-sonnet-4-6",
+        openai: "gpt-5.5",
+        google: "gemini-3-pro-preview",
       };
-      expect(defaultModels.openai).toBe("gpt-4.1");
+      expect(defaultModels.openai).toBe("gpt-5.5");
     });
 
     it("should have correct default model for google", () => {
       const defaultModels = {
-        anthropic: "claude-sonnet-4-5-20250514",
-        openai: "gpt-4.1",
-        google: "gemini-2.5-flash",
+        anthropic: "claude-sonnet-4-6",
+        openai: "gpt-5.5",
+        google: "gemini-3-pro-preview",
       };
-      expect(defaultModels.google).toBe("gemini-2.5-flash");
+      expect(defaultModels.google).toBe("gemini-3-pro-preview");
     });
   });
 

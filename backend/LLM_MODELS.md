@@ -1,6 +1,6 @@
 # LLM Models Reference
 
-*Updated: January 2026*
+*Updated: June 2026*
 
 ## Supported Providers
 
@@ -18,14 +18,14 @@ The Luminate backend supports three LLM providers through LangChain. Configure y
 
 | Model ID | Name | Context | Best For |
 |----------|------|---------|----------|
-| `claude-opus-4-5-20251101` | Claude Opus 4.5 | 200K+ | Most intelligent, complex tasks |
-| `claude-sonnet-4-5-20250514` | Claude Sonnet 4.5 | 200K | **DEFAULT** - Best balance of speed/quality |
-| `claude-haiku-4-5-20251101` | Claude Haiku 4.5 | 200K | Fastest responses, cost-effective |
-| `claude-3-7-sonnet-20250224` | Claude 3.7 Sonnet | 200K | Hybrid reasoning model |
+| `claude-opus-4-8` | Claude Opus 4.8 | 1M | Most intelligent, long-horizon agentic & complex tasks |
+| `claude-opus-4-7` | Claude Opus 4.7 | 1M | Previous-generation Opus |
+| `claude-sonnet-4-6` | Claude Sonnet 4.6 | 1M | **DEFAULT** - Best balance of speed/quality |
+| `claude-haiku-4-5` | Claude Haiku 4.5 | 200K | Fastest responses, cost-effective |
 
 **API Key**: Get from [Anthropic Console](https://console.anthropic.com)
 
-**Note**: Claude 3.x models (Opus, Sonnet, Haiku from 2024) have been deprecated.
+**Note**: Use bare model aliases (no date suffix). Claude 3.x and 4.5 models have been deprecated or retired.
 
 ---
 
@@ -39,8 +39,9 @@ The Luminate backend supports three LLM providers through LangChain. Configure y
 
 | Model ID | Name | Context | Best For |
 |----------|------|---------|----------|
-| `gpt-5.2` | GPT-5.2 | 196K | Latest flagship model |
-| `gpt-4.1` | GPT-4.1 | 128K | **DEFAULT** - Smartest non-reasoning model |
+| `gpt-5.5` | GPT-5.5 | 256K | **DEFAULT** - Latest flagship model |
+| `gpt-5.2` | GPT-5.2 | 256K | Previous flagship model |
+| `gpt-4.1` | GPT-4.1 | 128K | Smartest non-reasoning legacy model |
 | `gpt-4.1-mini` | GPT-4.1 Mini | 128K | Cost-effective, fast |
 | `gpt-4.1-nano` | GPT-4.1 Nano | 128K | Lightweight, efficient |
 | `o3` | O3 | 128K | Most powerful reasoning model |
@@ -63,9 +64,9 @@ The Luminate backend supports three LLM providers through LangChain. Configure y
 
 | Model ID | Name | Context | Best For |
 |----------|------|---------|----------|
-| `gemini-3-pro-preview` | Gemini 3 Pro | 1M | Latest reasoning-first model |
+| `gemini-3-pro-preview` | Gemini 3 Pro | 1M | **DEFAULT** - Latest reasoning-first model |
 | `gemini-3-flash-preview` | Gemini 3 Flash | 1M | Fast Gemini 3 variant |
-| `gemini-2.5-flash` | Gemini 2.5 Flash | 1M | **DEFAULT** - Fast, recommended |
+| `gemini-2.5-flash` | Gemini 2.5 Flash | 1M | Fast, cost-effective legacy model |
 | `gemini-2.5-pro` | Gemini 2.5 Pro | 1M | Quality-focused |
 | `gemini-2.5-flash-lite` | Gemini 2.5 Flash Lite | 1M | Most cost-efficient |
 | `gemini-2.0-flash` | Gemini 2.0 Flash (Legacy) | 1M | Previous generation |
@@ -82,18 +83,18 @@ The Luminate backend supports three LLM providers through LangChain. Configure y
 
 ```json
 {
-  "llmProvider": "anthropic",
-  "anthropicApiKey": "sk-ant-...",
-  "claudeModel": "claude-sonnet-4-5-20250514"
+  "llmProvider": "openai",
+  "openaiApiKey": "sk-...",
+  "openaiModel": "gpt-5.5"
 }
 ```
 
 ### Via Environment Variables (`.env`)
 
 ```bash
-LLM_PROVIDER=anthropic
-ANTHROPIC_API_KEY=sk-ant-...
-CLAUDE_MODEL=claude-sonnet-4-5-20250514
+LLM_PROVIDER=openai
+OPENAI_API_KEY=sk-...
+OPENAI_MODEL=gpt-5.5
 ```
 
 ---
@@ -113,9 +114,9 @@ All LLM endpoints (`/api/llm/research`, `/api/llm/content`, `/api/llm/script`) a
 
 If no model is specified, these defaults are used:
 
-- **Anthropic**: `claude-sonnet-4-5-20250514`
-- **OpenAI**: `gpt-4.1`
-- **Google**: `gemini-2.5-flash`
+- **Anthropic**: `claude-sonnet-4-6`
+- **OpenAI**: `gpt-5.5`
+- **Google**: `gemini-3-pro-preview`
 
 These models provide the best balance of speed, quality, and cost for video content generation.
 

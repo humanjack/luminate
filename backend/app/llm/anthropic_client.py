@@ -17,7 +17,7 @@ from app.llm.prompts import (
 class AnthropicLLM:
     """LangChain-based Anthropic LLM client with streaming support."""
 
-    def __init__(self, api_key: str, model: str = "claude-sonnet-4-5-20250514"):
+    def __init__(self, api_key: str, model: str = "claude-sonnet-4-6"):
         self.api_key = api_key
         self.model = model
         self._client = None
@@ -103,6 +103,6 @@ class AnthropicLLM:
             yield {"type": "error", "content": str(e)}
 
 
-async def get_llm_client(api_key: str, model: str = "claude-sonnet-4-5-20250514") -> AnthropicLLM:
+async def get_llm_client(api_key: str, model: str = "claude-sonnet-4-6") -> AnthropicLLM:
     """Factory function to get an AnthropicLLM client."""
     return AnthropicLLM(api_key=api_key, model=model)

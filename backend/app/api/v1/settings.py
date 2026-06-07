@@ -73,7 +73,7 @@ async def verify_anthropic(db: Session = Depends(get_db)):
                     "content-type": "application/json",
                 },
                 json={
-                    "model": "claude-sonnet-4-5-20250514",
+                    "model": "claude-sonnet-4-6",
                     "max_tokens": 10,
                     "messages": [{"role": "user", "content": "Hi"}],
                 },

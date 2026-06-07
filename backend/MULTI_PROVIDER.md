@@ -7,16 +7,16 @@ The Luminate backend now supports **three LLM providers** with seamless switchin
 ### Supported Providers
 
 1. **Anthropic (Claude)** - Original provider
-   - Default model: `claude-sonnet-4-5-20250514`
+   - Default model: `claude-sonnet-4-6`
    - Best for: High-quality content generation
 
-2. **OpenAI (GPT)** - NEW
-   - Default model: `gpt-4o`
+2. **OpenAI (GPT)**
+   - Default model: `gpt-5.5`
    - Best for: Fast, multimodal responses
 
-3. **Google (Gemini)** - NEW
-   - Default model: `gemini-2.0-flash-exp`
-   - Best for: Large context windows (up to 2M tokens)
+3. **Google (Gemini)**
+   - Default model: `gemini-3-pro-preview`
+   - Best for: Large context windows (up to 1M tokens)
 
 ### Files Added/Modified
 
@@ -45,7 +45,7 @@ POST /api/settings
 {
   "llmProvider": "openai",
   "openaiApiKey": "sk-...",
-  "openaiModel": "gpt-4o"
+  "openaiModel": "gpt-5.5"
 }
 ```
 
@@ -73,9 +73,9 @@ POST /api/llm/research
 
 | Provider | Default Model | Context | Speed |
 |----------|--------------|---------|-------|
-| Anthropic | `claude-sonnet-4-5-20250514` | 200K | Medium |
-| OpenAI | `gpt-4o` | 128K | Fast |
-| Google | `gemini-2.0-flash-exp` | 1M | Very Fast |
+| Anthropic | `claude-sonnet-4-6` | 1M | Medium |
+| OpenAI | `gpt-5.5` | 256K | Fast |
+| Google | `gemini-3-pro-preview` | 1M | Very Fast |
 
 See `/backend/LLM_MODELS.md` for complete model lists.
 
@@ -107,11 +107,11 @@ No restart required - changes take effect immediately!
 |-----|-------------|---------|
 | `llmProvider` | Active provider | `"anthropic"`, `"openai"`, `"google"` |
 | `anthropicApiKey` | Anthropic API key | `"sk-ant-..."` |
-| `claudeModel` | Claude model name | `"claude-sonnet-4-5-20250514"` |
+| `claudeModel` | Claude model name | `"claude-sonnet-4-6"` |
 | `openaiApiKey` | OpenAI API key | `"sk-..."` |
-| `openaiModel` | OpenAI model name | `"gpt-4o"` |
+| `openaiModel` | OpenAI model name | `"gpt-5.5"` |
 | `googleApiKey` | Google API key | `"AIza..."` |
-| `googleModel` | Gemini model name | `"gemini-2.0-flash-exp"` |
+| `googleModel` | Gemini model name | `"gemini-3-pro-preview"` |
 
 ### Environment Variables
 
@@ -119,7 +119,7 @@ No restart required - changes take effect immediately!
 # .env file
 LLM_PROVIDER=openai
 OPENAI_API_KEY=sk-...
-OPENAI_MODEL=gpt-4o
+OPENAI_MODEL=gpt-5.5
 ```
 
 ## 🔐 API Key Sources

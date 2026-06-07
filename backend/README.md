@@ -96,18 +96,18 @@ poetry run pytest
 The backend supports multiple LLM providers through LangChain:
 
 ### Anthropic (Claude)
-- **Default Model**: `claude-sonnet-4-5-20250514`
-- **Other Models**: `claude-sonnet-4-20241022`, `claude-opus-4-20241022`, etc.
+- **Default Model**: `claude-sonnet-4-6`
+- **Other Models**: `claude-opus-4-8`, `claude-opus-4-7`, `claude-haiku-4-5`, etc.
 - **API Key**: Anthropic Console (https://console.anthropic.com)
 
 ### OpenAI (GPT)
-- **Default Model**: `gpt-4o`
-- **Other Models**: `gpt-4-turbo`, `gpt-4`, `gpt-3.5-turbo`, etc.
+- **Default Model**: `gpt-5.5`
+- **Other Models**: `gpt-5.2`, `gpt-4.1`, `o3`, `o4-mini`, etc.
 - **API Key**: OpenAI Platform (https://platform.openai.com)
 
 ### Google (Gemini)
-- **Default Model**: `gemini-2.0-flash-exp`
-- **Other Models**: `gemini-1.5-pro`, `gemini-1.5-flash`, etc.
+- **Default Model**: `gemini-3-pro-preview`
+- **Other Models**: `gemini-3-flash-preview`, `gemini-2.5-pro`, `gemini-2.5-flash`, etc.
 - **API Key**: Google AI Studio (https://aistudio.google.com/apikey)
 
 ### Configuration
@@ -116,13 +116,13 @@ Configure via `/api/settings` endpoint or `.env` file:
 
 ```python
 {
-  "llmProvider": "anthropic",  # or "openai" or "google"
+  "llmProvider": "openai",  # or "anthropic" or "google"
   "anthropicApiKey": "sk-ant-...",
-  "claudeModel": "claude-sonnet-4-5-20250514",
+  "claudeModel": "claude-sonnet-4-6",
   "openaiApiKey": "sk-...",
-  "openaiModel": "gpt-4o",
+  "openaiModel": "gpt-5.5",
   "googleApiKey": "AIza...",
-  "googleModel": "gemini-2.0-flash-exp"
+  "googleModel": "gemini-3-pro-preview"
 }
 ```
 

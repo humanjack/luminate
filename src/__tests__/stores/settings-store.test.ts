@@ -4,9 +4,9 @@ import { useSettingsStore } from "@/stores/settings-store";
 // Helper to reset the store
 const resetStore = () => {
   useSettingsStore.setState({
-    llmProvider: "anthropic",
+    llmProvider: "openai",
     anthropicApiKey: "",
-    claudeModel: "claude-sonnet-4-5-20250514",
+    claudeModel: "claude-sonnet-4-6",
     speechProvider: "speechsuper",
     speechSuperApiKey: "",
     speechSuperAppId: "",
@@ -34,9 +34,9 @@ describe("useSettingsStore", () => {
   describe("initial state", () => {
     it("should have correct default LLM settings", () => {
       const state = useSettingsStore.getState();
-      expect(state.llmProvider).toBe("anthropic");
+      expect(state.llmProvider).toBe("openai");
       expect(state.anthropicApiKey).toBe("");
-      expect(state.claudeModel).toBe("claude-sonnet-4-5-20250514");
+      expect(state.claudeModel).toBe("claude-sonnet-4-6");
     });
 
     it("should have correct default speech settings", () => {
@@ -363,7 +363,7 @@ describe("useSettingsStore", () => {
       await useSettingsStore.getState().loadSettings();
 
       // Should not throw, state should remain unchanged
-      expect(useSettingsStore.getState().llmProvider).toBe("anthropic");
+      expect(useSettingsStore.getState().llmProvider).toBe("openai");
 
       consoleSpy.mockRestore();
     });

@@ -16,11 +16,11 @@ from app.llm.prompts import (
 )
 
 
-# Default models for each provider (updated January 2026)
+# Default models for each provider (updated June 2026)
 DEFAULT_MODELS = {
-    "anthropic": "claude-sonnet-4-5-20250514",
-    "openai": "gpt-4.1",
-    "google": "gemini-2.5-flash",
+    "anthropic": "claude-sonnet-4-6",
+    "openai": "gpt-5.5",
+    "google": "gemini-3-pro-preview",
 }
 
 

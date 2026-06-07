@@ -68,13 +68,13 @@ export const useSettingsStore = create<SettingsState>()(
   persist(
     (set, get) => ({
       // LLM Settings
-      llmProvider: "anthropic",
+      llmProvider: "openai",
       anthropicApiKey: "",
-      claudeModel: "claude-sonnet-4-5-20250514",
+      claudeModel: "claude-sonnet-4-6",
       openaiApiKey: "",
-      openaiModel: "gpt-4.1",
+      openaiModel: "gpt-5.5",
       googleApiKey: "",
-      googleModel: "gemini-2.5-flash",
+      googleModel: "gemini-3-pro-preview",
 
       // Speech Analysis Settings
       speechProvider: "speechsuper",
