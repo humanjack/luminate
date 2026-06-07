@@ -46,6 +46,7 @@ export default function ResearchPage({ params }: PageProps) {
   const [currentPrompt, setCurrentPrompt] = useState<string>("");
   const [streamingOutput, setStreamingOutput] = useState<string>("");
   const [llmError, setLlmError] = useState<string>("");
+  const [researchPhase, setResearchPhase] = useState<string>("");
 
   // Load existing research data
   useEffect(() => {
@@ -63,6 +64,7 @@ export default function ResearchPage({ params }: PageProps) {
     setContent("");
     setLlmError("");
     setStreamingOutput("");
+    setResearchPhase("");
 
     // Set the prompt for display
     const userPrompt = getResearchPrompt(topic, depth);
@@ -81,6 +83,8 @@ export default function ResearchPage({ params }: PageProps) {
         fullContent += message.content;
         setContent(fullContent);
         setStreamingOutput(fullContent);
+      } else if (message.type === "progress") {
+        setResearchPhase(message.label ?? "");
       } else if (message.type === "sources") {
         groundedSources = message.sources ?? [];
       } else if (message.type === "error") {
@@ -129,6 +133,7 @@ export default function ResearchPage({ params }: PageProps) {
         console.error(`Auto-save failed: ${(error as Error).message}`);
       }
     }
+    setResearchPhase("");
     setIsGenerating(false);
   };
 
@@ -256,7 +261,7 @@ export default function ResearchPage({ params }: PageProps) {
                   {isGenerating ? (
                     <span className="flex items-center gap-2">
                       <span className="animate-spin">⏳</span>
-                      Researching...
+                      {researchPhase || "Researching..."}
                     </span>
                   ) : (
                     <>

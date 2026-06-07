@@ -22,6 +22,7 @@ export type ResearchDepth = "quick" | "detailed" | "comprehensive";
  */
 export type ResearchEvent =
   | { type: "text"; content: string }
+  | { type: "progress"; label: string }
   | { type: "sources"; sources: SearchResult[] }
   | { type: "done"; content?: string }
   | { type: "error"; content: string };
