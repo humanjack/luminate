@@ -72,6 +72,7 @@ export default function ResearchPage({ params }: PageProps) {
     const generator = streamResearch(topic, depth);
     let fullContent = "";
     let hasError = false;
+    let groundedSources: Array<{ title: string; url: string; snippet?: string }> = [];
 
     setLlmStatus("streaming");
 
@@ -80,6 +81,8 @@ export default function ResearchPage({ params }: PageProps) {
         fullContent += message.content;
         setContent(fullContent);
         setStreamingOutput(fullContent);
+      } else if (message.type === "sources") {
+        groundedSources = message.sources ?? [];
       } else if (message.type === "error") {
         setContent(`Error: ${message.content}`);
         setLlmError(message.content);
@@ -95,14 +98,24 @@ export default function ResearchPage({ params }: PageProps) {
       setLlmStatus("complete");
       // Auto-save when generation completes
       try {
+        // When grounded research returned real sources, persist them as
+        // first-class sources (deduped by URL) so claims can link to real
+        // source IDs. Otherwise fall back to scraping markdown links.
+        let projectSources: Array<{ id: string; url: string | null }> =
+          currentProject?.sources ?? [];
+        if (groundedSources.length > 0) {
+          projectSources = await persistGroundedSources(groundedSources);
+        }
+
         await saveResearchData(id, {
           topic,
           depth,
           content: fullContent,
-          sources: extractSources(fullContent),
+          sources:
+            groundedSources.length > 0 ? groundedSources : extractSources(fullContent),
         });
+
         // Persist claims separately so the outline step can cite them
-        const projectSources = currentProject?.sources ?? [];
         const extracted = extractClaimsFromMarkdown(fullContent, projectSources);
         if (extracted.length > 0) {
           await fetch(`/api/projects/${id}/claims`, {
@@ -110,13 +123,50 @@ export default function ResearchPage({ params }: PageProps) {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ items: extracted }),
           });
-          await loadProject(id);
         }
+        await loadProject(id);
       } catch (error) {
         console.error(`Auto-save failed: ${(error as Error).message}`);
       }
     }
     setIsGenerating(false);
+  };
+
+  /**
+   * Persist grounded sources to the first-class sources table, skipping URLs
+   * already present, then return the refreshed source list (with IDs) so claims
+   * can be linked to them.
+   */
+  const persistGroundedSources = async (
+    grounded: Array<{ title: string; url: string; snippet?: string }>
+  ): Promise<Array<{ id: string; url: string | null }>> => {
+    let existing: Array<{ id: string; url: string | null }> = [];
+    try {
+      const res = await fetch(`/api/projects/${id}/sources`);
+      if (res.ok) existing = await res.json();
+    } catch {
+      /* fall through with empty existing */
+    }
+    const existingUrls = new Set(existing.map((s) => s.url).filter(Boolean));
+    const toAdd = grounded.filter((s) => s.url && !existingUrls.has(s.url));
+
+    await Promise.all(
+      toAdd.map((s) =>
+        fetch(`/api/projects/${id}/sources`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type: "url", url: s.url, title: s.title }),
+        }).catch(() => undefined)
+      )
+    );
+
+    try {
+      const refreshed = await fetch(`/api/projects/${id}/sources`);
+      if (refreshed.ok) return await refreshed.json();
+    } catch {
+      /* fall through */
+    }
+    return existing;
   };
 
   const handleSaveAndNext = async () => {

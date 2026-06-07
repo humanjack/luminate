@@ -49,6 +49,13 @@ export interface SearchProvider {
    * Implemented by "native-tool" providers; "search-api" providers return [].
    */
   getToolDefinitions(): unknown[];
+
+  /**
+   * Parse real sources from a completed model message (native-tool providers,
+   * which surface sources via the web-search result/citation blocks).
+   * "search-api" providers return [] (their sources come from `search()`).
+   */
+  extractSources(messageContent: unknown): SearchResult[];
 }
 
 /** Narrow config the factory needs — decoupled from the full settings store. */

@@ -28,4 +28,9 @@ export class BraveSearchProvider implements SearchProvider {
   getToolDefinitions(): unknown[] {
     return [];
   }
+
+  // search-api providers surface sources via search(), not message parsing.
+  extractSources(): SearchResult[] {
+    return [];
+  }
 }

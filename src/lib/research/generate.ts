@@ -11,9 +11,20 @@
  * web research is enabled we run grounded generation here; otherwise we keep
  * the existing proxy/fallback path so nothing breaks mid-migration.
  */
-import { getSearchProvider, SearchProvider, SearchProviderConfig } from "./search";
+import { getSearchProvider, SearchProvider, SearchProviderConfig, SearchResult } from "./search";
 
 export type ResearchDepth = "quick" | "detailed" | "comprehensive";
+
+/**
+ * Events streamed by the grounded research generator. Mirrors the SSE contract
+ * the client consumes via `useLLM`: text deltas, a one-time `sources` payload,
+ * then done/error.
+ */
+export type ResearchEvent =
+  | { type: "text"; content: string }
+  | { type: "sources"; sources: SearchResult[] }
+  | { type: "done"; content?: string }
+  | { type: "error"; content: string };
 
 /** Settings subset the research generator needs (decoupled from the store). */
 export interface ResearchGenerationConfig {

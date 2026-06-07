@@ -3,9 +3,18 @@
 import { useCallback, useState } from "react";
 import { useSettingsStore } from "@/stores/settings-store";
 
+export interface ResearchSource {
+  title: string;
+  url: string;
+  snippet?: string;
+}
+
 export interface StreamingMessage {
-  type: "text" | "done" | "error";
+  type: "text" | "done" | "error" | "sources";
+  /** Text payload for text/done/error events. Empty/absent on sources events. */
   content: string;
+  /** Present for `sources` events (grounded research, Phase 1). */
+  sources?: ResearchSource[];
 }
 
 // Parses an SSE byte stream into StreamingMessage objects.
