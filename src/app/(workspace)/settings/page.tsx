@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Key, Mic, Video, Palette, Save, CheckCircle, XCircle, Loader2, AlertCircle, RefreshCw } from "lucide-react";
+import { ArrowLeft, Key, Mic, Video, Palette, Save, CheckCircle, XCircle, Loader2, AlertCircle, RefreshCw, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -77,6 +77,12 @@ export default function SettingsPage() {
     elsaApiKey,
     azureSpeechKey,
     azureSpeechRegion,
+    enableWebResearch,
+    searchProvider,
+    maxSources,
+    maxSearchIterations,
+    tavilyApiKey,
+    braveApiKey,
     theme,
     autoSave,
     autoSaveInterval,
@@ -97,6 +103,7 @@ export default function SettingsPage() {
     setSpeechSuperCredentials,
     setElsaApiKey,
     setAzureSpeechCredentials,
+    setResearchPreferences,
     setTheme,
     setAutoSave,
     setRecordingPreferences,
@@ -497,10 +504,14 @@ export default function SettingsPage() {
         </div>
 
         <Tabs defaultValue="api" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="api">
               <Key className="w-4 h-4 mr-2" />
               API Keys
+            </TabsTrigger>
+            <TabsTrigger value="research">
+              <Search className="w-4 h-4 mr-2" />
+              Research
             </TabsTrigger>
             <TabsTrigger value="recording">
               <Mic className="w-4 h-4 mr-2" />
@@ -982,6 +993,155 @@ export default function SettingsPage() {
                   <p className="flex items-center gap-2">
                     <AlertCircle className="h-4 w-4" />
                     Speech analysis is optional. Mock data will be used if not configured.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Research Tab */}
+          <TabsContent value="research" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Grounded Web Research</CardTitle>
+                <CardDescription>
+                  Ground research (step 1) in real, fetched web sources instead of the
+                  model&apos;s training-cutoff memory. When off, research uses the existing
+                  single-prompt generation.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label>Enable web research</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Fetch real sources during generation and tie claims to them.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={enableWebResearch}
+                    onCheckedChange={(checked) =>
+                      setResearchPreferences({ enableWebResearch: checked })
+                    }
+                  />
+                </div>
+
+                <Separator />
+
+                <div className="space-y-2">
+                  <Label>Search provider</Label>
+                  <Select
+                    value={searchProvider}
+                    onValueChange={(v) =>
+                      setResearchPreferences({ searchProvider: v as typeof searchProvider })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="anthropic">Anthropic (native web search)</SelectItem>
+                      <SelectItem value="tavily">Tavily API</SelectItem>
+                      <SelectItem value="brave">Brave Search API</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    {searchProvider === "anthropic" &&
+                      "Uses the Anthropic API's server-side web search (no extra key). Billed per search on top of tokens — and not covered by a Claude Max subscription."}
+                    {searchProvider === "tavily" &&
+                      "Provider-agnostic search API. Requires a Tavily API key below."}
+                    {searchProvider === "brave" &&
+                      "Provider-agnostic search API. Requires a Brave Search API key below."}
+                  </p>
+                </div>
+
+                {searchProvider === "tavily" && (
+                  <div className="space-y-2">
+                    <Label>Tavily API Key</Label>
+                    <Input
+                      type="password"
+                      placeholder="tvly-..."
+                      value={tavilyApiKey}
+                      onChange={(e) => setResearchPreferences({ tavilyApiKey: e.target.value })}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Get a key at{" "}
+                      <a
+                        href="https://app.tavily.com/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline"
+                      >
+                        app.tavily.com
+                      </a>
+                    </p>
+                  </div>
+                )}
+
+                {searchProvider === "brave" && (
+                  <div className="space-y-2">
+                    <Label>Brave Search API Key</Label>
+                    <Input
+                      type="password"
+                      placeholder="BSA..."
+                      value={braveApiKey}
+                      onChange={(e) => setResearchPreferences({ braveApiKey: e.target.value })}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Get a key at{" "}
+                      <a
+                        href="https://api-dashboard.search.brave.com/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline"
+                      >
+                        api-dashboard.search.brave.com
+                      </a>
+                    </p>
+                  </div>
+                )}
+
+                <Separator />
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Max sources</Label>
+                    <Input
+                      type="number"
+                      value={maxSources}
+                      onChange={(e) =>
+                        setResearchPreferences({ maxSources: parseInt(e.target.value) || 8 })
+                      }
+                      min={1}
+                      max={50}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Upper bound on sources gathered per research run.
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Max search iterations</Label>
+                    <Input
+                      type="number"
+                      value={maxSearchIterations}
+                      onChange={(e) =>
+                        setResearchPreferences({ maxSearchIterations: parseInt(e.target.value) || 1 })
+                      }
+                      min={1}
+                      max={5}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Follow-up search rounds (used by the agentic loop, Phase 2). Bounded — more
+                      searching past a point reduces accuracy.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="bg-muted/50 rounded-md p-3 text-sm text-muted-foreground">
+                  <p className="flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4" />
+                    Grounded web research adds API cost (tokens + per-search charges). It is rolling
+                    out in phases — see umbrella issue #43.
                   </p>
                 </div>
               </CardContent>

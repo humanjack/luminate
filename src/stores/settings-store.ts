@@ -1,8 +1,11 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
+import type { SearchProviderId } from "@/lib/research/search/types";
+
 export type LLMProvider = "anthropic" | "openai" | "google" | "claude-cli";
 export type SpeechProvider = "speechsuper" | "elsa" | "azure" | "openai";
+export type { SearchProviderId };
 
 interface SettingsState {
   // LLM Settings
@@ -21,6 +24,14 @@ interface SettingsState {
   elsaApiKey: string;
   azureSpeechKey: string;
   azureSpeechRegion: string;
+
+  // Research Settings (grounded web research — umbrella #43)
+  enableWebResearch: boolean;
+  searchProvider: SearchProviderId;
+  maxSources: number;
+  maxSearchIterations: number;
+  tavilyApiKey: string;
+  braveApiKey: string;
 
   // YouTube Settings
   youtubeConnected: boolean;
@@ -53,6 +64,7 @@ interface SettingsState {
   setSpeechSuperCredentials: (apiKey: string, appId: string) => void;
   setElsaApiKey: (key: string) => void;
   setAzureSpeechCredentials: (key: string, region: string) => void;
+  setResearchPreferences: (prefs: Partial<Pick<SettingsState, "enableWebResearch" | "searchProvider" | "maxSources" | "maxSearchIterations" | "tavilyApiKey" | "braveApiKey">>) => void;
   setYouTubeConnection: (connected: boolean, channelName?: string) => void;
   setTheme: (theme: "light" | "dark" | "system") => void;
   setAutoSave: (enabled: boolean, interval?: number) => void;
@@ -83,6 +95,14 @@ export const useSettingsStore = create<SettingsState>()(
       elsaApiKey: "",
       azureSpeechKey: "",
       azureSpeechRegion: "eastus",
+
+      // Research Settings — off by default; Phase 1 (#45) flips on grounded search.
+      enableWebResearch: false,
+      searchProvider: "anthropic",
+      maxSources: 8,
+      maxSearchIterations: 2,
+      tavilyApiKey: "",
+      braveApiKey: "",
 
       // YouTube Settings
       youtubeConnected: false,
@@ -131,6 +151,8 @@ export const useSettingsStore = create<SettingsState>()(
         azureSpeechKey: key,
         azureSpeechRegion: region,
       }),
+
+      setResearchPreferences: (prefs) => set(prefs),
 
       setYouTubeConnection: (connected, channelName) => set({
         youtubeConnected: connected,
@@ -188,6 +210,12 @@ export const useSettingsStore = create<SettingsState>()(
               elsaApiKey: state.elsaApiKey,
               azureSpeechKey: state.azureSpeechKey,
               azureSpeechRegion: state.azureSpeechRegion,
+              enableWebResearch: state.enableWebResearch,
+              searchProvider: state.searchProvider,
+              maxSources: state.maxSources,
+              maxSearchIterations: state.maxSearchIterations,
+              tavilyApiKey: state.tavilyApiKey,
+              braveApiKey: state.braveApiKey,
               theme: state.theme,
               autoSave: state.autoSave,
               autoSaveInterval: state.autoSaveInterval,
@@ -252,6 +280,12 @@ export const useSettingsStore = create<SettingsState>()(
         elsaApiKey: state.elsaApiKey,
         azureSpeechKey: state.azureSpeechKey,
         azureSpeechRegion: state.azureSpeechRegion,
+        enableWebResearch: state.enableWebResearch,
+        searchProvider: state.searchProvider,
+        maxSources: state.maxSources,
+        maxSearchIterations: state.maxSearchIterations,
+        tavilyApiKey: state.tavilyApiKey,
+        braveApiKey: state.braveApiKey,
         theme: state.theme,
         autoSave: state.autoSave,
         autoSaveInterval: state.autoSaveInterval,
