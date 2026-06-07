@@ -101,7 +101,19 @@ export const useProjectStore = create<ProjectState>()(
           debug.apiCall("GET", `/api/projects/${id}`);
           const response = await fetch(`/api/projects/${id}`);
           debug.apiCall("GET", `/api/projects/${id}`, response.status);
-          if (!response.ok) throw new Error("Failed to load project");
+          if (!response.ok) {
+            // A 404 means the project was deleted or never existed (e.g. a stale id
+            // left in persisted localStorage after a DB reset). This is an expected,
+            // handleable condition — log it as a warning (not an error, which would
+            // trip the Next.js dev overlay) and clear currentProject so callers don't
+            // render stale data for the previous project.
+            if (response.status === 404) {
+              debug.warn("store", `loadProject(${id}): project not found (404)`);
+              set({ currentProject: null, error: "Project not found", isLoading: false });
+              return null;
+            }
+            throw new Error(`Failed to load project (${response.status})`);
+          }
           const project = await response.json();
           debug.storeAction("project", "loadProject", `loaded project: ${project.name}`);
           set({ currentProject: project, isLoading: false });
