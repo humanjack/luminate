@@ -4,125 +4,17 @@ import { drizzle } from "drizzle-orm/better-sqlite3";
 import { eq } from "drizzle-orm";
 import { v4 as uuid } from "uuid";
 import * as schema from "@/lib/db/schema";
+import { createTables } from "@/lib/db/migrations";
 
-// Create in-memory database for testing
+// In-memory database built from the app's real DDL so the test can never
+// drift from what `initializeDatabase()` actually creates.
 let sqlite: Database.Database;
 let db: ReturnType<typeof drizzle>;
 
 beforeAll(() => {
   sqlite = new Database(":memory:");
-  sqlite.pragma("foreign_keys = ON");
   db = drizzle(sqlite, { schema });
-
-  // Create tables manually for testing
-  sqlite.exec(`
-    CREATE TABLE projects (
-      id TEXT PRIMARY KEY,
-      name TEXT NOT NULL,
-      current_step INTEGER NOT NULL DEFAULT 1,
-      status TEXT NOT NULL DEFAULT 'draft',
-      created_at INTEGER NOT NULL,
-      updated_at INTEGER NOT NULL
-    );
-
-    CREATE TABLE research_data (
-      id TEXT PRIMARY KEY,
-      project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-      topic TEXT NOT NULL,
-      depth TEXT NOT NULL DEFAULT 'detailed',
-      content TEXT,
-      sources TEXT,
-      created_at INTEGER NOT NULL,
-      updated_at INTEGER NOT NULL
-    );
-
-    CREATE TABLE content_data (
-      id TEXT PRIMARY KEY,
-      project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-      title TEXT,
-      format TEXT NOT NULL DEFAULT 'presentation',
-      target_length INTEGER NOT NULL DEFAULT 10,
-      outline TEXT,
-      markdown TEXT,
-      created_at INTEGER NOT NULL,
-      updated_at INTEGER NOT NULL
-    );
-
-    CREATE TABLE slides (
-      id TEXT PRIMARY KEY,
-      project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-      "index" INTEGER NOT NULL,
-      markdown TEXT NOT NULL,
-      image_data TEXT,
-      theme TEXT DEFAULT 'default',
-      source_refs TEXT,
-      outline_item_id TEXT,
-      created_at INTEGER NOT NULL,
-      updated_at INTEGER NOT NULL
-    );
-
-    CREATE TABLE scripts (
-      id TEXT PRIMARY KEY,
-      project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-      slide_id TEXT REFERENCES slides(id) ON DELETE CASCADE,
-      slide_index INTEGER NOT NULL,
-      text TEXT NOT NULL,
-      speaker_notes TEXT,
-      estimated_duration INTEGER,
-      source_refs TEXT,
-      created_at INTEGER NOT NULL,
-      updated_at INTEGER NOT NULL
-    );
-
-    CREATE TABLE recordings (
-      id TEXT PRIMARY KEY,
-      project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-      slide_id TEXT REFERENCES slides(id) ON DELETE CASCADE,
-      slide_index INTEGER,
-      audio_path TEXT NOT NULL,
-      audio_data BLOB,
-      duration REAL,
-      waveform_data TEXT,
-      created_at INTEGER NOT NULL
-    );
-
-    CREATE TABLE analysis_results (
-      id TEXT PRIMARY KEY,
-      recording_id TEXT NOT NULL REFERENCES recordings(id) ON DELETE CASCADE,
-      project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-      overall_score REAL,
-      pronunciation_score REAL,
-      fluency_score REAL,
-      confidence_score REAL,
-      naturalness_score REAL,
-      words_per_minute REAL,
-      filler_words TEXT,
-      segments TEXT,
-      recommendations TEXT,
-      created_at INTEGER NOT NULL
-    );
-
-    CREATE TABLE videos (
-      id TEXT PRIMARY KEY,
-      project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-      output_path TEXT,
-      duration REAL,
-      resolution TEXT DEFAULT '1920x1080',
-      status TEXT NOT NULL DEFAULT 'pending',
-      progress INTEGER DEFAULT 0,
-      youtube_url TEXT,
-      youtube_video_id TEXT,
-      error_message TEXT,
-      created_at INTEGER NOT NULL,
-      updated_at INTEGER NOT NULL
-    );
-
-    CREATE TABLE settings (
-      key TEXT PRIMARY KEY,
-      value TEXT,
-      updated_at INTEGER NOT NULL
-    );
-  `);
+  createTables(sqlite);
 });
 
 afterAll(() => {
@@ -242,9 +134,7 @@ describe("Database Schema", () => {
         topic: "React Hooks",
         depth: "detailed",
         content: "# Research Content\n\nThis is research...",
-        sources: JSON.stringify([
-          { title: "React Docs", url: "https://react.dev" },
-        ]),
+        sources: [{ title: "React Docs", url: "https://react.dev" }],
         createdAt: now,
         updatedAt: now,
       });
@@ -424,10 +314,7 @@ describe("Database Schema", () => {
         fluencyScore: 82.0,
         confidenceScore: 90.0,
         wordsPerMinute: 145,
-        recommendations: JSON.stringify([
-          "Slow down slightly",
-          "Reduce filler words",
-        ]),
+        recommendations: ["Slow down slightly", "Reduce filler words"],
         createdAt: now,
       });
 

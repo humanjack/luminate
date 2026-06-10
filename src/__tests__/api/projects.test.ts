@@ -43,7 +43,7 @@ function createMockRequest(
   body?: any,
   url = "http://localhost:3000/api/projects"
 ): NextRequest {
-  const init: RequestInit = {
+  const init: ConstructorParameters<typeof NextRequest>[1] = {
     method,
     headers: { "Content-Type": "application/json" },
   };
@@ -148,6 +148,19 @@ describe("Projects API", () => {
 
     it("should return 400 when name is empty string", async () => {
       const request = createMockRequest("POST", { name: "" });
+      const response = await POST(request);
+      const data = await response.json();
+
+      expect(response.status).toBe(400);
+      expect(data.error).toBe("Project name is required");
+    });
+
+    it("should return 400 when body is JSON null", async () => {
+      const request = new NextRequest("http://localhost:3000/api/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "null",
+      });
       const response = await POST(request);
       const data = await response.json();
 
