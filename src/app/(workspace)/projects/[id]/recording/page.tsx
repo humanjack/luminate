@@ -31,7 +31,7 @@ interface RecordingData {
 export default function RecordingPage({ params }: PageProps) {
   const { id } = use(params);
   const { currentProject, saveRecording, deleteRecording } = useProjectStore();
-  const { teleprompterSpeed, teleprompterFontSize, showWaveform, defaultRecordingMode } = useSettingsStore();
+  const { teleprompterSpeed, teleprompterFontSize, showWaveform } = useSettingsStore();
 
   const [recordings, setRecordings] = useState<RecordingData[]>([]);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
@@ -41,7 +41,9 @@ export default function RecordingPage({ params }: PageProps) {
   const [audioLevel, setAudioLevel] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [teleprompterActive, setTeleprompterActive] = useState(false);
-  const [teleprompterPosition, setTeleprompterPosition] = useState(0);
+  // Scroll position lives in a ref — it's only ever written to scrollTop,
+  // so keeping it in state would re-render the page on every scroll tick.
+  const teleprompterPosRef = useRef(0);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -100,12 +102,9 @@ export default function RecordingPage({ params }: PageProps) {
   useEffect(() => {
     if (teleprompterActive && isRecording && !isPaused && teleprompterRef.current) {
       const scrollInterval = setInterval(() => {
-        setTeleprompterPosition((prev) => {
-          const maxScroll = teleprompterRef.current!.scrollHeight - teleprompterRef.current!.clientHeight;
-          const newPosition = Math.min(prev + 1, maxScroll);
-          teleprompterRef.current!.scrollTop = newPosition;
-          return newPosition;
-        });
+        const maxScroll = teleprompterRef.current!.scrollHeight - teleprompterRef.current!.clientHeight;
+        teleprompterPosRef.current = Math.min(teleprompterPosRef.current + 1, maxScroll);
+        teleprompterRef.current!.scrollTop = teleprompterPosRef.current;
       }, 60000 / teleprompterSpeed / 10); // Adjust based on WPM
 
       return () => clearInterval(scrollInterval);
@@ -199,7 +198,7 @@ export default function RecordingPage({ params }: PageProps) {
       mediaRecorderRef.current.start(1000);
       setIsRecording(true);
       setRecordingTime(0);
-      setTeleprompterPosition(0);
+      teleprompterPosRef.current = 0;
       if (teleprompterRef.current) {
         teleprompterRef.current.scrollTop = 0;
       }

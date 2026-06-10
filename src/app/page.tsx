@@ -3,7 +3,6 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, FolderOpen, Settings, Video, Sparkles, Gauge } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useProjectStore } from "@/stores/project-store";
 import Link from "next/link";

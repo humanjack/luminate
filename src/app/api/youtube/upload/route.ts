@@ -3,8 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 // POST /api/youtube/upload - Upload video to YouTube
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { videoPath, title, description, tags, privacy } = body;
+    await request.json();
 
     // YouTube API integration would go here
     // This requires OAuth2 authentication with Google

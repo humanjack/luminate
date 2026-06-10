@@ -32,7 +32,7 @@ export default function ScriptPage({ params }: PageProps) {
   const { id } = use(params);
   const { currentProject, saveScripts } = useProjectStore();
   const { llmProvider } = useSettingsStore();
-  const { streamScript, isStreaming, hasValidConfig } = useLLM();
+  const { streamScript, hasValidConfig } = useLLM();
 
   const [scripts, setScripts] = useState<ScriptData[]>([]);
   const scriptsRef = useRef<ScriptData[]>([]); // Ref to track current scripts for async operations

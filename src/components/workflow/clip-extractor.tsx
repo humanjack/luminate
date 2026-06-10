@@ -138,7 +138,7 @@ export function ClipExtractor({ projectId }: ClipExtractorProps) {
         )}
         {!loading && clips.length === 0 && !generating && (
           <p className="text-xs text-muted-foreground italic">
-            Click <strong>Suggest clips</strong> to scan this project's script for
+            Click <strong>Suggest clips</strong> to scan this project&apos;s script for
             shareable moments.
           </p>
         )}
