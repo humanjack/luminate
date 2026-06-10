@@ -17,31 +17,37 @@ async function* parseSSE(
   const decoder = new TextDecoder();
   let buffer = "";
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
 
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split("\n");
-    buffer = lines.pop() || "";
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || "";
 
-    for (const line of lines) {
-      if (!line.startsWith("data: ")) continue;
-      const data = line.slice(6);
-      if (data === "[DONE]") {
-        yield { type: "done", content: "" };
-        continue;
-      }
-      try {
-        yield JSON.parse(data);
-      } catch (e) {
-        console.error(`[useLLM] Failed to parse ${label} response:`, data, e);
-        // If it looks like plain text content, pass it through
-        if (data && !data.startsWith("{") && !data.startsWith("[")) {
-          yield { type: "text", content: data };
+      for (const line of lines) {
+        if (!line.startsWith("data: ")) continue;
+        const data = line.slice(6);
+        if (data === "[DONE]") {
+          yield { type: "done", content: "" };
+          continue;
+        }
+        try {
+          yield JSON.parse(data);
+        } catch (e) {
+          console.error(`[useLLM] Failed to parse ${label} response:`, data, e);
+          // If it looks like plain text content, pass it through
+          if (data && !data.startsWith("{") && !data.startsWith("[")) {
+            yield { type: "text", content: data };
+          }
         }
       }
     }
+  } finally {
+    // Consumers break out of the loop on error messages; cancel the
+    // underlying HTTP stream so the connection doesn't linger.
+    reader.cancel().catch(() => {});
   }
 }
 
