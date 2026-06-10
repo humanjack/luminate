@@ -15,7 +15,6 @@ import { useLLM } from "@/hooks/useLLM";
 import { estimateReadingTime, formatDuration } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { SCRIPT_SYSTEM_PROMPT, getScriptPrompt } from "@/lib/llm/prompts";
-import { debug } from "@/lib/debug";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -54,11 +53,9 @@ export default function ScriptPage({ params }: PageProps) {
 
   // Initialize scripts from slides or load existing scripts
   useEffect(() => {
-    debug.log("workflow", `Script page: currentProject changed, scripts in store: ${currentProject?.scripts?.length || 0}`);
 
     if (currentProject?.scripts && currentProject.scripts.length > 0) {
       // Load existing scripts from database
-      debug.log("workflow", `Script page: Loading ${currentProject.scripts.length} existing scripts from store`);
       const loadedScripts = currentProject.scripts.map((s) => ({
         slideIndex: s.slideIndex,
         slideId: s.slideId || undefined,
@@ -68,12 +65,10 @@ export default function ScriptPage({ params }: PageProps) {
       }));
       // Log first script text length to verify data is present
       if (loadedScripts[0]) {
-        debug.log("workflow", `Script page: First script text length: ${loadedScripts[0].text?.length || 0}`);
       }
       setScripts(loadedScripts);
     } else if (currentProject?.slides) {
       // Initialize empty scripts for each slide
-      debug.log("workflow", `Script page: No existing scripts, initializing ${currentProject.slides.length} empty scripts from slides`);
       setScripts(
         currentProject.slides.map((slide, index) => ({
           slideIndex: index,
@@ -101,7 +96,6 @@ export default function ScriptPage({ params }: PageProps) {
   const handleGenerateScript = async (index: number) => {
     if (!currentProject?.slides?.[index]) return;
 
-    debug.llmEvent("start", `script for slide ${index + 1}`);
     setIsGenerating(true);
     setGeneratingIndex(index);
     setLlmError("");
@@ -119,7 +113,6 @@ export default function ScriptPage({ params }: PageProps) {
     let hasError = false;
 
     setLlmStatus("streaming");
-    debug.llmEvent("streaming", "receiving chunks");
 
     for await (const message of generator) {
       if (message.type === "text") {
@@ -133,14 +126,12 @@ export default function ScriptPage({ params }: PageProps) {
           )
         );
       } else if (message.type === "error") {
-        debug.llmEvent("error", message.content);
         console.error("Script generation error:", message.content);
         setLlmError(message.content);
         setLlmStatus("error");
         hasError = true;
         break;
       } else if (message.type === "done") {
-        debug.llmEvent("complete", `${fullText.length} chars generated for slide ${index + 1}`);
         setLlmStatus("complete");
       }
     }
@@ -148,7 +139,6 @@ export default function ScriptPage({ params }: PageProps) {
     if (!hasError) {
       setLlmStatus("complete");
       // Auto-save the updated scripts after generation completes
-      debug.log("workflow", `Script generation complete for slide ${index + 1}, auto-saving...`);
       try {
         // Use scriptsRef.current to get the latest state (avoids stale closure)
         const currentScripts = scriptsRef.current;
@@ -157,11 +147,9 @@ export default function ScriptPage({ params }: PageProps) {
             ? { ...script, text: fullText, estimatedDuration: estimateReadingTime(fullText) }
             : script
         );
-        debug.log("workflow", `Auto-saving ${updatedScripts.length} scripts, generated text length: ${fullText.length}`);
         await saveScripts(id, updatedScripts);
-        debug.log("workflow", "Auto-save complete");
       } catch (error) {
-        debug.error("workflow", `Auto-save failed: ${(error as Error).message}`);
+        console.error(`Auto-save failed: ${(error as Error).message}`);
       }
     }
     setIsGenerating(false);
@@ -193,18 +181,15 @@ export default function ScriptPage({ params }: PageProps) {
   const handleSaveAndNext = async () => {
     const validScripts = scripts.filter((s) => s.text.trim());
     if (validScripts.length === 0) {
-      debug.warn("workflow", "handleSaveAndNext: no scripts to save");
       return false;
     }
 
-    debug.log("workflow", `handleSaveAndNext: saving ${validScripts.length} scripts...`);
 
     try {
       await saveScripts(id, scripts);
-      debug.log("workflow", "handleSaveAndNext: scripts saved successfully");
       return true;
     } catch (error) {
-      debug.error("workflow", `handleSaveAndNext failed: ${(error as Error).message}`);
+      console.error(`handleSaveAndNext failed: ${(error as Error).message}`);
       return false;
     }
   };

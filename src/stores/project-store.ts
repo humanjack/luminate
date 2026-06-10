@@ -13,7 +13,6 @@ import type {
   Claim,
   OutlineItem,
 } from "@/lib/db/schema";
-import { debug } from "@/lib/debug";
 
 export interface ProjectWithData extends Project {
   researchData?: ResearchData | null;
@@ -71,36 +70,29 @@ interface ProjectState {
 
 export const useProjectStore = create<ProjectState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       projects: [],
       currentProject: null,
       isLoading: false,
       error: null,
 
       loadProjects: async () => {
-        debug.storeAction("project", "loadProjects", "starting");
         set({ isLoading: true, error: null });
         try {
-          debug.apiCall("GET", "/api/projects");
           const response = await fetch("/api/projects");
-          debug.apiCall("GET", "/api/projects", response.status);
           if (!response.ok) throw new Error("Failed to load projects");
           const projects = await response.json();
-          debug.storeAction("project", "loadProjects", `loaded ${projects.length} projects`);
           set({ projects, isLoading: false });
         } catch (error) {
-          debug.error("store", `loadProjects failed: ${(error as Error).message}`);
+          console.error(`loadProjects failed: ${(error as Error).message}`);
           set({ error: (error as Error).message, isLoading: false });
         }
       },
 
       loadProject: async (id: string) => {
-        debug.storeAction("project", "loadProject", { id });
         set({ isLoading: true, error: null });
         try {
-          debug.apiCall("GET", `/api/projects/${id}`);
           const response = await fetch(`/api/projects/${id}`);
-          debug.apiCall("GET", `/api/projects/${id}`, response.status);
           if (!response.ok) {
             // A 404 means the project was deleted or never existed (e.g. a stale id
             // left in persisted localStorage after a DB reset). This is an expected,
@@ -108,18 +100,16 @@ export const useProjectStore = create<ProjectState>()(
             // trip the Next.js dev overlay) and clear currentProject so callers don't
             // render stale data for the previous project.
             if (response.status === 404) {
-              debug.warn("store", `loadProject(${id}): project not found (404)`);
               set({ currentProject: null, error: "Project not found", isLoading: false });
               return null;
             }
             throw new Error(`Failed to load project (${response.status})`);
           }
           const project = await response.json();
-          debug.storeAction("project", "loadProject", `loaded project: ${project.name}`);
           set({ currentProject: project, isLoading: false });
           return project;
         } catch (error) {
-          debug.error("store", `loadProject(${id}) failed: ${(error as Error).message}`);
+          console.error(`loadProject(${id}) failed: ${(error as Error).message}`);
           set({ error: (error as Error).message, isLoading: false });
           return null;
         }
@@ -183,62 +173,52 @@ export const useProjectStore = create<ProjectState>()(
       setCurrentProject: (project) => set({ currentProject: project }),
 
       saveResearchData: async (projectId: string, data: Partial<ResearchData>) => {
-        debug.storeAction("project", "saveResearchData", { projectId, topic: data.topic });
         try {
-          debug.apiCall("POST", `/api/projects/${projectId}/research`);
           const response = await fetch(`/api/projects/${projectId}/research`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(data),
           });
-          debug.apiCall("POST", `/api/projects/${projectId}/research`, response.status);
           if (!response.ok) throw new Error("Failed to save research data");
           const researchData = await response.json();
-          debug.storeAction("project", "saveResearchData", "saved successfully");
           set((state) => ({
             currentProject: state.currentProject?.id === projectId
               ? { ...state.currentProject, researchData }
               : state.currentProject,
           }));
         } catch (error) {
-          debug.error("store", `saveResearchData(${projectId}) failed: ${(error as Error).message}`);
+          console.error(`saveResearchData(${projectId}) failed: ${(error as Error).message}`);
           set({ error: (error as Error).message });
         }
       },
 
       saveContentData: async (projectId: string, data: Partial<ContentData>) => {
-        debug.storeAction("project", "saveContentData", { projectId, title: data.title });
         try {
-          debug.apiCall("POST", `/api/projects/${projectId}/content`);
           const response = await fetch(`/api/projects/${projectId}/content`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(data),
           });
-          debug.apiCall("POST", `/api/projects/${projectId}/content`, response.status);
           if (!response.ok) throw new Error("Failed to save content data");
           const contentData = await response.json();
-          debug.storeAction("project", "saveContentData", "saved successfully");
           set((state) => ({
             currentProject: state.currentProject?.id === projectId
               ? { ...state.currentProject, contentData }
               : state.currentProject,
           }));
         } catch (error) {
-          debug.error("store", `saveContentData(${projectId}) failed: ${(error as Error).message}`);
+          console.error(`saveContentData(${projectId}) failed: ${(error as Error).message}`);
           set({ error: (error as Error).message });
         }
       },
 
       saveOutline: async (projectId: string, items: Partial<OutlineItem>[]) => {
-        debug.storeAction("project", "saveOutline", { projectId, count: items.length });
         try {
           const response = await fetch(`/api/projects/${projectId}/outline`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ items }),
           });
-          debug.apiCall("POST", `/api/projects/${projectId}/outline`, response.status);
           if (!response.ok) {
             const detail = await response.text();
             throw new Error(`Failed to save outline: ${response.status} ${detail}`);
@@ -251,61 +231,53 @@ export const useProjectStore = create<ProjectState>()(
           }));
           return saved;
         } catch (error) {
-          debug.error("store", `saveOutline failed: ${(error as Error).message}`);
+          console.error(`saveOutline failed: ${(error as Error).message}`);
           set({ error: (error as Error).message });
           throw error;
         }
       },
 
       saveSlides: async (projectId: string, slides: Partial<Slide>[]) => {
-        debug.storeAction("project", "saveSlides", { projectId, count: slides.length });
         try {
-          debug.apiCall("POST", `/api/projects/${projectId}/slides`);
           const response = await fetch(`/api/projects/${projectId}/slides`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ slides }),
           });
-          debug.apiCall("POST", `/api/projects/${projectId}/slides`, response.status);
           if (!response.ok) {
             const errorText = await response.text();
-            debug.error("store", `saveSlides failed: ${response.status} - ${errorText}`);
+            console.error(`saveSlides failed: ${response.status} - ${errorText}`);
             throw new Error(`Failed to save slides: ${response.status}`);
           }
           const savedSlides = await response.json();
-          debug.storeAction("project", "saveSlides", `saved ${savedSlides.length} slides`);
           set((state) => ({
             currentProject: state.currentProject?.id === projectId
               ? { ...state.currentProject, slides: savedSlides }
               : state.currentProject,
           }));
         } catch (error) {
-          debug.error("store", `saveSlides error: ${(error as Error).message}`);
+          console.error(`saveSlides error: ${(error as Error).message}`);
           set({ error: (error as Error).message });
           throw error; // Re-throw so the caller knows it failed
         }
       },
 
       saveScripts: async (projectId: string, scripts: Partial<Script>[]) => {
-        debug.storeAction("project", "saveScripts", { projectId, count: scripts.length });
         try {
-          debug.apiCall("POST", `/api/projects/${projectId}/scripts`);
           const response = await fetch(`/api/projects/${projectId}/scripts`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ scripts }),
           });
-          debug.apiCall("POST", `/api/projects/${projectId}/scripts`, response.status);
           if (!response.ok) throw new Error("Failed to save scripts");
           const savedScripts = await response.json();
-          debug.storeAction("project", "saveScripts", `saved ${savedScripts.length} scripts`);
           set((state) => ({
             currentProject: state.currentProject?.id === projectId
               ? { ...state.currentProject, scripts: savedScripts }
               : state.currentProject,
           }));
         } catch (error) {
-          debug.error("store", `saveScripts(${projectId}) failed: ${(error as Error).message}`);
+          console.error(`saveScripts(${projectId}) failed: ${(error as Error).message}`);
           set({ error: (error as Error).message });
         }
       },

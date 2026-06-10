@@ -24,7 +24,6 @@ import { useSettingsStore } from "@/stores/settings-store";
 import { useLLM } from "@/hooks/useLLM";
 import { cn } from "@/lib/utils";
 import { RESEARCH_SYSTEM_PROMPT, getResearchPrompt } from "@/lib/llm/prompts";
-import { debug } from "@/lib/debug";
 import { extractClaimsFromMarkdown } from "@/lib/research/claims";
 
 interface PageProps {
@@ -60,7 +59,6 @@ export default function ResearchPage({ params }: PageProps) {
   const handleGenerate = async () => {
     if (!topic.trim()) return;
 
-    debug.llmEvent("start", `research for topic: ${topic}`);
     setIsGenerating(true);
     setContent("");
     setLlmError("");
@@ -76,7 +74,6 @@ export default function ResearchPage({ params }: PageProps) {
     let hasError = false;
 
     setLlmStatus("streaming");
-    debug.llmEvent("streaming", "receiving chunks");
 
     for await (const message of generator) {
       if (message.type === "text") {
@@ -84,14 +81,12 @@ export default function ResearchPage({ params }: PageProps) {
         setContent(fullContent);
         setStreamingOutput(fullContent);
       } else if (message.type === "error") {
-        debug.llmEvent("error", message.content);
         setContent(`Error: ${message.content}`);
         setLlmError(message.content);
         setLlmStatus("error");
         hasError = true;
         break;
       } else if (message.type === "done") {
-        debug.llmEvent("complete", `${fullContent.length} chars generated`);
         setLlmStatus("complete");
       }
     }
@@ -99,7 +94,6 @@ export default function ResearchPage({ params }: PageProps) {
     if (!hasError) {
       setLlmStatus("complete");
       // Auto-save when generation completes
-      debug.log("workflow", "LLM generation complete, auto-saving research...");
       try {
         await saveResearchData(id, {
           topic,
@@ -118,9 +112,8 @@ export default function ResearchPage({ params }: PageProps) {
           });
           await loadProject(id);
         }
-        debug.log("workflow", "Auto-save complete");
       } catch (error) {
-        debug.error("workflow", `Auto-save failed: ${(error as Error).message}`);
+        console.error(`Auto-save failed: ${(error as Error).message}`);
       }
     }
     setIsGenerating(false);
@@ -128,11 +121,9 @@ export default function ResearchPage({ params }: PageProps) {
 
   const handleSaveAndNext = async () => {
     if (!content.trim()) {
-      debug.warn("workflow", "handleSaveAndNext: no research content");
       return false;
     }
 
-    debug.log("workflow", "handleSaveAndNext: saving research data...");
 
     try {
       await saveResearchData(id, {
@@ -141,10 +132,9 @@ export default function ResearchPage({ params }: PageProps) {
         content,
         sources: extractSources(content),
       });
-      debug.log("workflow", "handleSaveAndNext: research saved successfully");
       return true;
     } catch (error) {
-      debug.error("workflow", `handleSaveAndNext failed: ${(error as Error).message}`);
+      console.error(`handleSaveAndNext failed: ${(error as Error).message}`);
       return false;
     }
   };

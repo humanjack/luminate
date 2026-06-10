@@ -19,7 +19,6 @@ import { SlideCanvas } from "@/components/workflow/slide-canvas";
 import { SLIDE_THEMES, type SlideTheme } from "@/lib/slides/themes";
 import { useProjectStore } from "@/stores/project-store";
 import { cn } from "@/lib/utils";
-import { debug } from "@/lib/debug";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -43,14 +42,9 @@ export default function SlidesPage({ params }: PageProps) {
 
   // Parse slides from content markdown
   useEffect(() => {
-    debug.log("workflow", `Slides page: currentProject exists: ${!!currentProject}`);
-    debug.log("workflow", `Slides page: existing slides: ${currentProject?.slides?.length || 0}`);
-    debug.log("workflow", `Slides page: contentData exists: ${!!currentProject?.contentData}`);
-    debug.log("workflow", `Slides page: contentData.markdown length: ${currentProject?.contentData?.markdown?.length || 0}`);
 
     if (currentProject?.slides && currentProject.slides.length > 0) {
       // Load existing slides
-      debug.log("workflow", `Loading ${currentProject.slides.length} existing slides`);
       setSlides(
         currentProject.slides.map((s) => ({
           id: s.id,
@@ -68,10 +62,8 @@ export default function SlidesPage({ params }: PageProps) {
       const sections = currentProject.contentData.markdown
         .split("---")
         .filter((s) => s.trim());
-      debug.log("workflow", `Parsing ${sections.length} slides from content markdown`);
       setSlides(sections.map((markdown) => ({ markdown: markdown.trim() })));
     } else {
-      debug.warn("workflow", "No slides or content data available");
     }
   }, [currentProject]);
 
@@ -99,12 +91,10 @@ export default function SlidesPage({ params }: PageProps) {
 
   const handleSaveAndNext = async () => {
     if (slides.length === 0) {
-      debug.warn("workflow", "handleSaveAndNext: no slides to save");
       alert("No slides to save. Please add content first.");
       return false;
     }
 
-    debug.log("workflow", `handleSaveAndNext: saving ${slides.length} slides...`);
     setIsSaving(true);
 
     try {
@@ -116,11 +106,10 @@ export default function SlidesPage({ params }: PageProps) {
           theme,
         }))
       );
-      debug.log("workflow", "handleSaveAndNext: slides saved successfully");
       setIsSaving(false);
       return true;
     } catch (error) {
-      debug.error("workflow", `handleSaveAndNext failed: ${(error as Error).message}`);
+      console.error(`handleSaveAndNext failed: ${(error as Error).message}`);
       alert(`Failed to save slides: ${(error as Error).message}`);
       setIsSaving(false);
       return false;

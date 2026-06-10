@@ -1,5 +1,4 @@
 import { create } from "zustand";
-import { debug } from "@/lib/debug";
 
 export const WORKFLOW_STEPS = [
   { id: 1, name: "Research", path: "research", icon: "🔍", description: "Research your topic" },
@@ -29,50 +28,29 @@ export const useWorkflowStore = create<WorkflowState>()((set, get) => ({
   currentStep: 1,
   maxCompletedStep: 0 as WorkflowStepId,
 
-  isStepLocked: (step: WorkflowStepId) => {
-    const { maxCompletedStep } = get();
-    // Step is locked if it's more than 1 step ahead of maxCompletedStep
-    const isLocked = step > maxCompletedStep + 1;
-    debug.log("workflow", `isStepLocked(${step}): ${isLocked} (maxCompleted: ${maxCompletedStep})`);
-    return isLocked;
-  },
+  // A step is locked if it's more than 1 step ahead of maxCompletedStep
+  isStepLocked: (step: WorkflowStepId) => step > get().maxCompletedStep + 1,
 
-  canNavigateTo: (step: WorkflowStepId) => {
-    const { maxCompletedStep } = get();
-    // Can navigate to any completed step or the next available step
-    const canNav = step <= maxCompletedStep + 1;
-    debug.log("workflow", `canNavigateTo(${step}): ${canNav} (maxCompleted: ${maxCompletedStep})`);
-    return canNav;
-  },
+  // Can navigate to any completed step or the next available step
+  canNavigateTo: (step: WorkflowStepId) => step <= get().maxCompletedStep + 1,
 
   setCurrentStep: (step: WorkflowStepId) => {
-    const { currentStep: prevStep } = get();
     if (get().canNavigateTo(step)) {
-      debug.step(prevStep, step, "setCurrentStep");
       set({ currentStep: step });
-    } else {
-      debug.warn("workflow", `setCurrentStep(${step}) blocked - cannot navigate from step ${prevStep}`);
     }
   },
 
   setMaxCompletedStep: (step: WorkflowStepId) => {
-    const { maxCompletedStep: prev } = get();
-    debug.log("workflow", `setMaxCompletedStep: ${prev} -> ${step}`);
     set({ maxCompletedStep: step });
   },
 
   completeStep: (step: WorkflowStepId) => {
-    const { maxCompletedStep } = get();
-    if (step > maxCompletedStep) {
-      debug.log("workflow", `completeStep(${step}): marking as completed (was: ${maxCompletedStep})`);
+    if (step > get().maxCompletedStep) {
       set({ maxCompletedStep: step });
-    } else {
-      debug.log("workflow", `completeStep(${step}): already completed (maxCompleted: ${maxCompletedStep})`);
     }
   },
 
   resetWorkflow: () => {
-    debug.log("workflow", "resetWorkflow: resetting to step 1");
     set({ currentStep: 1, maxCompletedStep: 0 as WorkflowStepId });
   },
 
