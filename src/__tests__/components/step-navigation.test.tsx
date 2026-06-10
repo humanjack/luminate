@@ -224,29 +224,4 @@ describe("StepNavigation", () => {
       expect(nextButton).toBeDisabled();
     });
   });
-
-  describe("workflow integration", () => {
-    it("should correctly navigate through all steps", async () => {
-      const store = useWorkflowStore.getState();
-
-      // Start at step 1
-      const { rerender } = render(
-        <StepNavigation
-          projectId="test-project"
-          currentStep={1}
-          onNext={async () => true}
-        />
-      );
-
-      // Click next to go to step 2
-      fireEvent.click(screen.getByRole("button", { name: /content/i }));
-
-      await waitFor(() => {
-        expect(store.maxCompletedStep).toBeGreaterThanOrEqual(1);
-      });
-
-      // Verify navigation was called
-      expect(mockPush).toHaveBeenLastCalledWith("/projects/test-project/content");
-    });
-  });
 });

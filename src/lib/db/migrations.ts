@@ -5,7 +5,13 @@ const dbPath = path.join(process.cwd(), "luminate.db");
 
 export function initializeDatabase() {
   const sqlite = new Database(dbPath);
+  createTables(sqlite);
+  sqlite.close();
+}
 
+// Creates the full schema on the given connection. Exported so tests can
+// build an in-memory database from the exact DDL the app runs.
+export function createTables(sqlite: Database.Database) {
   // Enable foreign keys
   sqlite.pragma("foreign_keys = ON");
 
@@ -94,6 +100,9 @@ export function initializeDatabase() {
       filler_words TEXT,
       segments TEXT,
       recommendations TEXT,
+      transcript TEXT,
+      diff TEXT,
+      provider TEXT,
       created_at INTEGER NOT NULL
     );
 
@@ -266,8 +275,9 @@ export function initializeDatabase() {
   applyColumnIfMissing(sqlite, "slides", "source_refs", "TEXT");
   applyColumnIfMissing(sqlite, "slides", "outline_item_id", "TEXT");
   applyColumnIfMissing(sqlite, "scripts", "source_refs", "TEXT");
-
-  sqlite.close();
+  applyColumnIfMissing(sqlite, "analysis_results", "transcript", "TEXT");
+  applyColumnIfMissing(sqlite, "analysis_results", "diff", "TEXT");
+  applyColumnIfMissing(sqlite, "analysis_results", "provider", "TEXT");
 }
 
 function applyColumnIfMissing(

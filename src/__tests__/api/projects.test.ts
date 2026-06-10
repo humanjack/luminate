@@ -43,7 +43,7 @@ function createMockRequest(
   body?: any,
   url = "http://localhost:3000/api/projects"
 ): NextRequest {
-  const init: RequestInit = {
+  const init: ConstructorParameters<typeof NextRequest>[1] = {
     method,
     headers: { "Content-Type": "application/json" },
   };

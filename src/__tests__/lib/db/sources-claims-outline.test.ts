@@ -4,96 +4,15 @@ import { drizzle } from "drizzle-orm/better-sqlite3";
 import { eq } from "drizzle-orm";
 import { v4 as uuid } from "uuid";
 import * as schema from "@/lib/db/schema";
+import { createTables } from "@/lib/db/migrations";
 
 let sqlite: Database.Database;
 let db: ReturnType<typeof drizzle>;
 
 beforeAll(() => {
   sqlite = new Database(":memory:");
-  sqlite.pragma("foreign_keys = ON");
   db = drizzle(sqlite, { schema });
-
-  sqlite.exec(`
-    CREATE TABLE projects (
-      id TEXT PRIMARY KEY,
-      name TEXT NOT NULL,
-      current_step INTEGER NOT NULL DEFAULT 1,
-      status TEXT NOT NULL DEFAULT 'draft',
-      created_at INTEGER NOT NULL,
-      updated_at INTEGER NOT NULL
-    );
-
-    CREATE TABLE videos (
-      id TEXT PRIMARY KEY,
-      project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-      output_path TEXT,
-      duration REAL,
-      resolution TEXT DEFAULT '1920x1080',
-      status TEXT NOT NULL DEFAULT 'pending',
-      progress INTEGER DEFAULT 0,
-      youtube_url TEXT,
-      youtube_video_id TEXT,
-      error_message TEXT,
-      created_at INTEGER NOT NULL,
-      updated_at INTEGER NOT NULL
-    );
-
-    CREATE TABLE sources (
-      id TEXT PRIMARY KEY,
-      project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-      type TEXT NOT NULL CHECK(type IN ('url', 'text', 'manual')),
-      url TEXT,
-      title TEXT,
-      author TEXT,
-      published_at TEXT,
-      fetched_text TEXT,
-      status TEXT NOT NULL DEFAULT 'pending',
-      trust_notes TEXT,
-      created_at INTEGER NOT NULL,
-      updated_at INTEGER NOT NULL
-    );
-
-    CREATE TABLE claims (
-      id TEXT PRIMARY KEY,
-      project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-      text TEXT NOT NULL,
-      source_ids TEXT NOT NULL DEFAULT '[]',
-      pinned INTEGER NOT NULL DEFAULT 0,
-      status TEXT NOT NULL DEFAULT 'proposed',
-      created_at INTEGER NOT NULL,
-      updated_at INTEGER NOT NULL
-    );
-
-    CREATE TABLE outline_items (
-      id TEXT PRIMARY KEY,
-      project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-      "index" INTEGER NOT NULL,
-      title TEXT NOT NULL,
-      summary TEXT,
-      speaker_goal TEXT,
-      claim_ids TEXT NOT NULL DEFAULT '[]',
-      approved INTEGER NOT NULL DEFAULT 0,
-      created_at INTEGER NOT NULL,
-      updated_at INTEGER NOT NULL
-    );
-
-    CREATE TABLE exports (
-      id TEXT PRIMARY KEY,
-      project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-      video_id TEXT REFERENCES videos(id) ON DELETE SET NULL,
-      status TEXT NOT NULL DEFAULT 'pending',
-      progress INTEGER NOT NULL DEFAULT 0,
-      resolution TEXT NOT NULL DEFAULT '1920x1080',
-      output_path TEXT,
-      captions_path TEXT,
-      transcript_path TEXT,
-      sources_path TEXT,
-      duration REAL,
-      error_message TEXT,
-      created_at INTEGER NOT NULL,
-      updated_at INTEGER NOT NULL
-    );
-  `);
+  createTables(sqlite);
 });
 
 afterEach(() => {
