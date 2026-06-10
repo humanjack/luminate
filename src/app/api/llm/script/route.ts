@@ -1,80 +1,18 @@
 import { NextRequest } from "next/server";
+import { proxyLLMStream, jsonError } from "@/lib/llm/proxy";
 
 export const runtime = "nodejs";
 
-const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8000";
-
-/**
- * Proxy script requests to the FastAPI backend
- * The backend handles all LLM provider logic via LangChain
- */
 export async function POST(request: NextRequest) {
-  const body = await request.json();
-  const { slideContent, slideIndex } = body;
+  const { slideContent, slideIndex } = await request.json();
 
   if (!slideContent) {
-    return new Response(JSON.stringify({ error: "Slide content is required" }), {
-      status: 400,
-      headers: { "Content-Type": "application/json" },
-    });
+    return jsonError("Slide content is required", 400);
   }
 
-  console.log(`[LLM Script] Proxying to backend: ${BACKEND_URL}/api/llm/script`);
-
-  try {
-    // Forward request to FastAPI backend
-    const backendResponse = await fetch(`${BACKEND_URL}/api/llm/script`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ slide_content: slideContent, slide_index: slideIndex }),
-    });
-
-    if (!backendResponse.ok) {
-      const error = await backendResponse.text();
-      console.error(`[LLM Script] Backend error:`, error);
-      return new Response(
-        JSON.stringify({ error: `Backend error: ${backendResponse.status}` }),
-        { status: backendResponse.status, headers: { "Content-Type": "application/json" } }
-      );
-    }
-
-    // Stream the response from backend to client
-    const reader = backendResponse.body?.getReader();
-    if (!reader) {
-      return new Response(JSON.stringify({ error: "No response body from backend" }), {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-
-    const stream = new ReadableStream({
-      async start(controller) {
-        try {
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            controller.enqueue(value);
-          }
-          controller.close();
-        } catch (error) {
-          console.error(`[LLM Script] Stream error:`, error);
-          controller.error(error);
-        }
-      },
-    });
-
-    return new Response(stream, {
-      headers: {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
-        Connection: "keep-alive",
-      },
-    });
-  } catch (error) {
-    console.error(`[LLM Script] Proxy error:`, error);
-    return new Response(
-      JSON.stringify({ error: `Failed to connect to backend: ${(error as Error).message}` }),
-      { status: 502, headers: { "Content-Type": "application/json" } }
-    );
-  }
+  return proxyLLMStream(
+    "/api/llm/script",
+    { slide_content: slideContent, slide_index: slideIndex },
+    "LLM Script"
+  );
 }

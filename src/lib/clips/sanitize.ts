@@ -2,6 +2,8 @@
 // Clip rules: 15s ≤ duration ≤ 60s, inside the total video, no overlaps
 // (later suggestions get nudged or dropped).
 
+import { asNumber, asString, clamp } from "@/lib/utils";
+
 export interface RawClip {
   startSec?: unknown;
   endSec?: unknown;
@@ -20,23 +22,6 @@ export interface ValidClip {
 
 const MIN_DURATION = 15;
 const MAX_DURATION = 60;
-
-function asNumber(v: unknown): number {
-  if (typeof v === "number" && Number.isFinite(v)) return v;
-  if (typeof v === "string") {
-    const n = Number(v);
-    if (Number.isFinite(n)) return n;
-  }
-  return NaN;
-}
-
-function asString(v: unknown): string {
-  return typeof v === "string" ? v.trim() : "";
-}
-
-function clamp(n: number, lo: number, hi: number): number {
-  return Math.max(lo, Math.min(hi, n));
-}
 
 export function sanitizeClips(
   raw: unknown,

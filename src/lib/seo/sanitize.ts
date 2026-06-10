@@ -1,3 +1,4 @@
+import { asNumber, asString } from "@/lib/utils";
 import { combineScores, scoreTitle } from "./ctrScore";
 import { buildTimestamps, type ScriptForTimestamp, type SlideForTimestamp } from "./timestamps";
 
@@ -21,19 +22,6 @@ interface RawSeoOutput {
   tags?: unknown;
 }
 
-function asString(value: unknown): string {
-  return typeof value === "string" ? value.trim() : "";
-}
-
-function asNumber(value: unknown): number {
-  if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (typeof value === "string") {
-    const n = Number(value);
-    if (Number.isFinite(n)) return n;
-  }
-  return 50;
-}
-
 /**
  * Validate + enrich raw LLM JSON.
  * - Drops malformed titles, keeps up to 5
@@ -55,7 +43,8 @@ export function sanitizeSeoOutput(
     .map((t) => {
       const text = asString(t.text ?? t.title);
       const reasoning = asString(t.reasoning) || "No reasoning provided.";
-      const llmScore = asNumber(t.ctrScore ?? t.score);
+      // 50 = neutral CTR when the LLM omits or mangles the score
+      const llmScore = asNumber(t.ctrScore ?? t.score, 50);
       const heuristicScore = scoreTitle(text);
       return text ? { text, reasoning, ctrScore: combineScores(llmScore, heuristicScore) } : null;
     })
