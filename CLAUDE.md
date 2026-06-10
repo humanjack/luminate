@@ -86,12 +86,12 @@ Three Zustand stores in `/src/stores/`:
 
 ### LLM Integration
 
-Dual provider support configured in settings:
+Two paths, both streaming Server-Sent Events:
 
-- **Anthropic API** - Uses `@anthropic-ai/sdk` with streaming
-- **Claude CLI** - Spawns `claude` process with `--output-format stream-json`
+- **Core generation** (`/api/llm/research`, `/api/llm/content`, `/api/llm/script`) — proxies to the FastAPI backend via `proxyLLMStream()` in `/src/lib/llm/proxy.ts` (`BACKEND_URL`, default `http://localhost:8000`). The backend must be running (`make backend-dev`) for these three steps.
+- **Direct Anthropic** (`/api/llm/seo`, `/api/llm/clips`, agent runner in `/src/lib/agent/runner.ts`) — calls `@anthropic-ai/sdk` directly with the key from settings.
 
-All LLM operations stream via Server-Sent Events. The `useLLM()` hook provides async generators that yield `{type: "text"|"done"|"error", content}` messages. Prompts are centralized in `/src/lib/llm/prompts.ts`.
+The `useLLM()` hook provides async generators that yield `{type: "text"|"done"|"error", content}` messages. Prompts are centralized in `/src/lib/llm/prompts.ts`.
 
 ### Database Schema
 
@@ -130,14 +130,8 @@ UI components in `/src/components/ui/` are Shadcn/Radix-based.
 
 ### Media Processing
 
-- **Audio**: `react-media-recorder` for capture, `wavesurfer.js` for visualization
-- **Video**: `@ffmpeg/ffmpeg` (WASM) for client-side encoding
-
-Next.js config includes required CORS headers for FFmpeg WASM:
-```
-Cross-Origin-Opener-Policy: same-origin
-Cross-Origin-Embedder-Policy: require-corp
-```
+- **Audio**: native `MediaRecorder` API for capture (recording page)
+- **Video**: server-side rendering via the system `ffmpeg` binary (`/src/lib/export/render.ts`, spawned by `/api/projects/[id]/export`)
 
 ## Backend Architecture (Python/FastAPI)
 
