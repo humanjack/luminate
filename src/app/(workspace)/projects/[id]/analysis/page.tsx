@@ -432,7 +432,7 @@ export default function AnalysisPage({ params }: PageProps) {
                                 key={i}
                                 className="inline-flex items-center gap-1 px-2 py-1 bg-muted rounded text-sm"
                               >
-                                "{fw.word}"
+                                &quot;{fw.word}&quot;
                                 <span className="text-muted-foreground">× {fw.count}</span>
                               </span>
                             ))}

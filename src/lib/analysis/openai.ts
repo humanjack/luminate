@@ -1,5 +1,5 @@
 import { promises as fs } from "fs";
-import { countFillerWords, resolveAudioFile, COMMON_FILLERS } from "./audio";
+import { countFillerWords, resolveAudioFile } from "./audio";
 
 export interface OpenAIAnalysisInput {
   apiKey: string;

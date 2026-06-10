@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import { cn, formatDuration, estimateReadingTime, generateId } from "@/lib/utils";
 
 describe("cn (className utility)", () => {

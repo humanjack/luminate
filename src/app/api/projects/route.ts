@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, projects } from "@/lib/db";
-import { desc, eq } from "drizzle-orm";
+import { desc } from "drizzle-orm";
 import { v4 as uuid } from "uuid";
 
 // GET /api/projects - List all projects

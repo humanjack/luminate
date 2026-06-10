@@ -119,7 +119,7 @@ export function ThumbnailPicker({ projectId }: ThumbnailPickerProps) {
 
         {!loading && variants.length === 0 && !generating && (
           <p className="text-xs text-muted-foreground italic">
-            Click <strong>Generate thumbnails</strong> to render four variants from this project's content.
+            Click <strong>Generate thumbnails</strong> to render four variants from this project&apos;s content.
           </p>
         )}
 

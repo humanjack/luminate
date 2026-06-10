@@ -19,3 +19,21 @@ export function estimateReadingTime(text: string, wordsPerMinute = 150): number 
 export function generateId(): string {
   return crypto.randomUUID();
 }
+
+// Loose coercion helpers for validating untrusted LLM JSON output.
+export function asString(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+export function asNumber(value: unknown, fallback = NaN): number {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const n = Number(value);
+    if (Number.isFinite(n)) return n;
+  }
+  return fallback;
+}
+
+export function clamp(n: number, lo: number, hi: number): number {
+  return Math.max(lo, Math.min(hi, n));
+}

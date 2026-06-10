@@ -22,7 +22,6 @@ import {
 } from "@/lib/llm/prompts";
 import { computeCost } from "./cost";
 import {
-  AGENT_STEPS,
   AgentEvent,
   AgentRunOptions,
   AgentStepName,

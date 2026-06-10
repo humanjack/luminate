@@ -196,7 +196,7 @@ export function SeoCopilotPanel({ projectId, onMetadataChange }: SeoCopilotPanel
 
         {!loading && !metadata && !generating && (
           <p className="text-xs text-muted-foreground italic">
-            Click <strong>Generate SEO</strong> to produce title candidates, a description, and tags from this project's research and scripts.
+            Click <strong>Generate SEO</strong> to produce title candidates, a description, and tags from this project&apos;s research and scripts.
           </p>
         )}
 

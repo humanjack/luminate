@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
 
     // Filter out undefined values
     const filteredSettings = Object.fromEntries(
-      Object.entries(llmSettings).filter(([_, v]) => v !== undefined)
+      Object.entries(llmSettings).filter(([, v]) => v !== undefined)
     );
 
     if (BACKEND_URL && Object.keys(filteredSettings).length > 0) {

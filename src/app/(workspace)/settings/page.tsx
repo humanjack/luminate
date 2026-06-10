@@ -162,7 +162,7 @@ export default function SettingsPage() {
           message: result.error || "Invalid API key",
         });
       }
-    } catch (error) {
+    } catch {
       setAnthropicVerification({
         status: "invalid",
         message: "Failed to verify API key",
@@ -199,7 +199,7 @@ export default function SettingsPage() {
           message: result.error || "Invalid API key",
         });
       }
-    } catch (error) {
+    } catch {
       setOpenaiVerification({
         status: "invalid",
         message: "Failed to verify API key",
@@ -236,7 +236,7 @@ export default function SettingsPage() {
           message: result.error || "Invalid API key",
         });
       }
-    } catch (error) {
+    } catch {
       setGoogleVerification({
         status: "invalid",
         message: "Failed to verify API key",
@@ -266,7 +266,7 @@ export default function SettingsPage() {
           message: result.error || "Claude CLI not found",
         });
       }
-    } catch (error) {
+    } catch {
       setClaudeCliVerification({
         status: "invalid",
         message: "Failed to verify Claude CLI",
@@ -304,7 +304,7 @@ export default function SettingsPage() {
           message: result.error,
         });
       }
-    } catch (error) {
+    } catch {
       setSpeechSuperVerification({
         status: "invalid",
         message: "Failed to verify credentials",
@@ -342,7 +342,7 @@ export default function SettingsPage() {
           message: result.error,
         });
       }
-    } catch (error) {
+    } catch {
       setElsaVerification({
         status: "invalid",
         message: "Failed to verify API key",
@@ -373,7 +373,7 @@ export default function SettingsPage() {
       } else {
         setAzureVerification({ status: "invalid", message: result.error || "Invalid credentials" });
       }
-    } catch (error) {
+    } catch {
       setAzureVerification({ status: "invalid", message: "Failed to verify Azure credentials" });
     }
   };
