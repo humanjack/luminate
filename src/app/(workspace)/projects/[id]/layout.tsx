@@ -9,7 +9,6 @@ import { WorkflowStepper } from "@/components/workflow/workflow-stepper";
 import { AgentRunPanel } from "@/components/workflow/agent-run-panel";
 import { useProjectStore } from "@/stores/project-store";
 import { useWorkflowStore } from "@/stores/workflow-store";
-import { debug } from "@/lib/debug";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -46,13 +45,11 @@ export default function ProjectLayout({ children, params }: ProjectLayoutProps) 
 
   // Load project on mount and reload on step navigation to ensure fresh data
   useEffect(() => {
-    debug.log("workflow", `Layout: Loading project ${id}, pathname: ${pathname}`);
     let cancelled = false;
     setNotFound(false);
     loadProject(id).then((project) => {
       if (cancelled) return;
       if (project) {
-        debug.log("workflow", `Layout: Project loaded - scripts: ${project.scripts?.length || 0}, slides: ${project.slides?.length || 0}`);
         setMaxCompletedStep((project.currentStep - 1) as any);
         setCurrentStep(project.currentStep as any);
         setNewName(project.name);

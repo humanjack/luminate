@@ -13,7 +13,6 @@ import { useProjectStore } from "@/stores/project-store";
 import { useSettingsStore } from "@/stores/settings-store";
 import { formatDuration } from "@/lib/utils";
 import { cn } from "@/lib/utils";
-import { debug } from "@/lib/debug";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -182,7 +181,7 @@ export default function RecordingPage({ params }: PageProps) {
             )
           );
         } catch (err) {
-          debug.error("workflow", `save recording failed: ${(err as Error).message}`);
+          console.error(`save recording failed: ${(err as Error).message}`);
           setRecordings((prev) =>
             prev.map((rec, i) =>
               i === slideIdx
@@ -274,7 +273,7 @@ export default function RecordingPage({ params }: PageProps) {
       try {
         await deleteRecording(target.recordingId);
       } catch (err) {
-        debug.error("workflow", `delete recording failed: ${(err as Error).message}`);
+        console.error(`delete recording failed: ${(err as Error).message}`);
       }
     }
     setRecordings((prev) =>
@@ -289,7 +288,6 @@ export default function RecordingPage({ params }: PageProps) {
   const handleSaveAndNext = async () => {
     const completed = recordings.filter((r) => r.saved);
     if (completed.length === 0) {
-      debug.warn("workflow", "handleSaveAndNext: no saved recordings");
       return false;
     }
     return true;

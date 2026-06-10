@@ -25,7 +25,6 @@ import { useSettingsStore } from "@/stores/settings-store";
 import { useLLM } from "@/hooks/useLLM";
 import { cn } from "@/lib/utils";
 import { CONTENT_SYSTEM_PROMPT, getContentPrompt } from "@/lib/llm/prompts";
-import { debug } from "@/lib/debug";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -65,7 +64,6 @@ export default function ContentPage({ params }: PageProps) {
   const handleGenerate = async () => {
     if (!currentProject?.researchData?.content) return;
 
-    debug.llmEvent("start", `content generation for format: ${format}`);
     setIsGenerating(true);
     setMarkdown("");
     setLlmError("");
@@ -85,7 +83,6 @@ export default function ContentPage({ params }: PageProps) {
     let hasError = false;
 
     setLlmStatus("streaming");
-    debug.llmEvent("streaming", "receiving chunks");
 
     for await (const message of generator) {
       if (message.type === "text") {
@@ -93,14 +90,12 @@ export default function ContentPage({ params }: PageProps) {
         setMarkdown(fullContent);
         setStreamingOutput(fullContent);
       } else if (message.type === "error") {
-        debug.llmEvent("error", message.content);
         setMarkdown(`Error: ${message.content}`);
         setLlmError(message.content);
         setLlmStatus("error");
         hasError = true;
         break;
       } else if (message.type === "done") {
-        debug.llmEvent("complete", `${fullContent.length} chars generated`);
         setLlmStatus("complete");
       }
     }
@@ -108,7 +103,6 @@ export default function ContentPage({ params }: PageProps) {
     if (!hasError) {
       setLlmStatus("complete");
       // Auto-save when generation completes
-      debug.log("workflow", "LLM generation complete, auto-saving content...");
       try {
         // Parse outline from markdown for saving
         const sections = fullContent.split("---").filter((s) => s.trim());
@@ -129,9 +123,8 @@ export default function ContentPage({ params }: PageProps) {
           outline,
           markdown: fullContent,
         });
-        debug.log("workflow", "Auto-save complete");
       } catch (error) {
-        debug.error("workflow", `Auto-save failed: ${(error as Error).message}`);
+        console.error(`Auto-save failed: ${(error as Error).message}`);
       }
     }
     setIsGenerating(false);
@@ -151,11 +144,9 @@ export default function ContentPage({ params }: PageProps) {
 
   const handleSaveAndNext = async () => {
     if (!markdown.trim()) {
-      debug.warn("workflow", "handleSaveAndNext: no markdown content");
       return false;
     }
 
-    debug.log("workflow", "handleSaveAndNext: saving content data...");
 
     // Parse outline from markdown
     const sections = markdown.split("---").filter((s) => s.trim());
@@ -177,10 +168,9 @@ export default function ContentPage({ params }: PageProps) {
         outline,
         markdown,
       });
-      debug.log("workflow", "handleSaveAndNext: content saved successfully");
       return true;
     } catch (error) {
-      debug.error("workflow", `handleSaveAndNext failed: ${(error as Error).message}`);
+      console.error(`handleSaveAndNext failed: ${(error as Error).message}`);
       return false;
     }
   };
