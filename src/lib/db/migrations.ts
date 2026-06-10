@@ -5,8 +5,11 @@ const dbPath = path.join(process.cwd(), "luminate.db");
 
 export function initializeDatabase() {
   const sqlite = new Database(dbPath);
-  createTables(sqlite);
-  sqlite.close();
+  try {
+    createTables(sqlite);
+  } finally {
+    sqlite.close();
+  }
 }
 
 // Creates the full schema on the given connection. Exported so tests can

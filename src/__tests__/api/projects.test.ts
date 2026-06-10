@@ -155,6 +155,19 @@ describe("Projects API", () => {
       expect(data.error).toBe("Project name is required");
     });
 
+    it("should return 400 when body is JSON null", async () => {
+      const request = new NextRequest("http://localhost:3000/api/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "null",
+      });
+      const response = await POST(request);
+      const data = await response.json();
+
+      expect(response.status).toBe(400);
+      expect(data.error).toBe("Project name is required");
+    });
+
     it("should return 500 on database error", async () => {
       (db.insert as ReturnType<typeof vi.fn>).mockReturnValue({
         values: vi.fn().mockReturnValue({
