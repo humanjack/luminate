@@ -19,6 +19,7 @@ import { StepContainer } from "@/components/workflow/step-container";
 import { StepNavigation } from "@/components/workflow/step-navigation";
 import { LLMProgressPanel, LLMStatus } from "@/components/workflow/llm-progress-panel";
 import { SourcesPanel } from "@/components/workflow/sources-panel";
+import { ResearchReader } from "@/components/workflow/research-reader";
 import {
   TrustSummary,
   type TrustSummaryData,
@@ -44,6 +45,7 @@ export default function ResearchPage({ params }: PageProps) {
   const [topic, setTopic] = useState("");
   const [depth, setDepth] = useState<"quick" | "detailed" | "comprehensive">("detailed");
   const [content, setContent] = useState("");
+  const [contentView, setContentView] = useState<"reader" | "edit">("reader");
   const [isGenerating, setIsGenerating] = useState(false);
 
   // LLM Progress tracking
@@ -360,17 +362,59 @@ export default function ResearchPage({ params }: PageProps) {
           />
 
           <div className="space-y-2">
-            <Label htmlFor="content">Research Content</Label>
-            <Textarea
-              id="content"
-              placeholder="Your research content will appear here..."
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              className={cn(
-                "min-h-[400px] font-mono text-sm",
-                isGenerating && "animate-pulse"
+            <div className="flex items-center justify-between">
+              <Label htmlFor="content">Research Content</Label>
+              {content.trim() && !isGenerating && (
+                <div className="flex rounded-md border p-0.5 text-xs" role="tablist">
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={contentView === "reader"}
+                    onClick={() => setContentView("reader")}
+                    data-testid="research-view-reader"
+                    className={cn(
+                      "px-2.5 py-1 rounded transition-colors",
+                      contentView === "reader"
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    Reader
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={contentView === "edit"}
+                    onClick={() => setContentView("edit")}
+                    data-testid="research-view-edit"
+                    className={cn(
+                      "px-2.5 py-1 rounded transition-colors",
+                      contentView === "edit"
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    Edit
+                  </button>
+                </div>
               )}
-            />
+            </div>
+            {contentView === "reader" && content.trim() && !isGenerating ? (
+              <div className="min-h-[400px] rounded-md border p-5 overflow-auto">
+                <ResearchReader markdown={content} />
+              </div>
+            ) : (
+              <Textarea
+                id="content"
+                placeholder="Your research content will appear here..."
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                className={cn(
+                  "min-h-[400px] font-mono text-sm",
+                  isGenerating && "animate-pulse"
+                )}
+              />
+            )}
             <p className="text-xs text-muted-foreground">
               {content.split(/\s+/).filter(Boolean).length} words
             </p>
