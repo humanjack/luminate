@@ -130,6 +130,12 @@ lint:
 test:
 	$(NPM) run test:run
 
+# Research eval harness (Phase 5, #49). Needs ANTHROPIC_API_KEY; makes real API
+# calls and writes a report to evals/research/out/. Set EVAL_STRICT=1 to enforce
+# the grounded-ratio floor.
+eval-research:
+	npx vitest run --config vitest.eval.config.ts
+
 backend-test: check-backend-venv
 	cd $(BACKEND_DIR) && .venv/bin/python -m pytest tests/ -v
 
