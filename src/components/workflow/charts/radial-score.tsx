@@ -31,6 +31,8 @@ interface RadialScoreProps {
   display?: string;
   /** Override the value-derived color band (e.g. readiness uses status). */
   tone?: ScoreTone;
+  /** Override the SVG aria-label (defaults to "Score N out of 100"). */
+  ariaLabel?: string;
   className?: string;
 }
 
@@ -47,6 +49,7 @@ export function RadialScore({
   showLabel = true,
   display,
   tone,
+  ariaLabel,
   className,
 }: RadialScoreProps) {
   const animated = useCountUp(value);
@@ -66,7 +69,7 @@ export function RadialScore({
           viewBox={`0 0 ${size} ${size}`}
           className="-rotate-90"
           role="img"
-          aria-label={`Score ${Math.round(value)} out of 100`}
+          aria-label={ariaLabel ?? `Score ${Math.round(value)} out of 100`}
         >
           <circle
             cx={size / 2}

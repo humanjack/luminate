@@ -59,6 +59,7 @@ export function ReadinessPanel({ projectId, report }: ReadinessPanelProps) {
             caption="slides ready"
             showLabel={false}
             tone={STATUS_TONE[status]}
+            ariaLabel={`${ready} of ${total} slides ready to export`}
             size={104}
             stroke={9}
           />
