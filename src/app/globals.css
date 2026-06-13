@@ -195,3 +195,37 @@
     animation: none;
   }
 }
+
+/* Dashboard chart entrance (#67) — bars grow from the left on load. The
+   base (un-animated) state is the full bar, so reduced-motion shows it
+   immediately without staying collapsed. */
+@keyframes grow-x {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.bar-grow {
+  transform-origin: left;
+  animation: grow-x 600ms ease-out both;
+}
+
+@keyframes draw-ring {
+  from {
+    stroke-dashoffset: var(--ring-len, 0);
+  }
+}
+
+.ring-draw {
+  animation: draw-ring 700ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bar-grow,
+  .ring-draw {
+    animation: none;
+  }
+}
