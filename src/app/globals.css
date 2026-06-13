@@ -255,3 +255,61 @@
     animation: none;
   }
 }
+
+/* Shared motion language (#75) — page/step entrance + hover lift. */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in {
+  animation: fade-in 350ms ease-out both;
+}
+
+.slide-up {
+  animation: slide-up 400ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.lift {
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px -12px hsl(var(--foreground) / 0.25);
+}
+
+/* Global reduced-motion respect: neutralize animations/transitions and the
+   bespoke entrance/lift utilities for users who ask for less motion. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .fade-in,
+  .slide-up {
+    animation: none !important;
+  }
+  .lift:hover {
+    transform: none !important;
+  }
+}
