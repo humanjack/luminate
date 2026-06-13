@@ -2,7 +2,13 @@
 
 import { cn } from "@/lib/utils";
 import { useCountUp } from "./use-count-up";
-import { scoreTone, scoreLabel, TONE_STROKE, TONE_TEXT } from "./score-color";
+import {
+  scoreTone,
+  scoreLabel,
+  TONE_STROKE,
+  TONE_TEXT,
+  type ScoreTone,
+} from "./score-color";
 
 /** Stroke-dashoffset for a value (0–100) on a ring of the given circumference. */
 export function dashOffset(value: number, circumference: number): number {
@@ -23,6 +29,8 @@ interface RadialScoreProps {
   showLabel?: boolean;
   /** Override the displayed denominator label, e.g. "8 / 10". */
   display?: string;
+  /** Override the value-derived color band (e.g. readiness uses status). */
+  tone?: ScoreTone;
   className?: string;
 }
 
@@ -38,12 +46,13 @@ export function RadialScore({
   caption = "Overall Score",
   showLabel = true,
   display,
+  tone,
   className,
 }: RadialScoreProps) {
   const animated = useCountUp(value);
   const r = (size - stroke) / 2;
   const circumference = 2 * Math.PI * r;
-  const tone = scoreTone(value);
+  const resolvedTone = tone ?? scoreTone(value);
 
   return (
     <div
@@ -74,7 +83,7 @@ export function RadialScore({
             fill="none"
             strokeWidth={stroke}
             strokeLinecap="round"
-            stroke={TONE_STROKE[tone]}
+            stroke={TONE_STROKE[resolvedTone]}
             strokeDasharray={circumference}
             strokeDashoffset={dashOffset(animated, circumference)}
             style={{ transition: "stroke-dashoffset 120ms linear" }}
@@ -82,7 +91,7 @@ export function RadialScore({
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           <span
-            className={cn("text-4xl font-bold tabular-nums leading-none", TONE_TEXT[tone])}
+            className={cn("text-4xl font-bold tabular-nums leading-none", TONE_TEXT[resolvedTone])}
           >
             {display ?? Math.round(animated)}
           </span>
