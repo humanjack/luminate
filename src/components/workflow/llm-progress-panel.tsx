@@ -40,6 +40,7 @@ export function LLMProgressPanel({
   const [elapsedMs, setElapsedMs] = useState(0);
   const outputRef = useRef<HTMLPreElement>(null);
   const startRef = useRef<number | null>(null);
+  const prevStatusRef = useRef<LLMStatus>("idle");
 
   // Auto-scroll output when streaming, but only if the user is already pinned
   // to the bottom — don't yank them back up if they've scrolled to re-read.
@@ -52,15 +53,22 @@ export function LLMProgressPanel({
   }, [output, status]);
 
   // Elapsed-time meter: runs while preparing/streaming, freezes on
-  // complete/error, resets when the panel returns to idle. All state writes
-  // happen in async callbacks (timer/cleanup), never synchronously in the
-  // effect body, so we don't trigger cascading renders.
+  // complete/error. The clock (re)starts whenever we enter an active phase
+  // from a non-active one — consumers cycle preparing → streaming →
+  // complete and then back to preparing (they never return to "idle"), so
+  // we must key the reset on the active-transition, not on "idle". All state
+  // writes happen in async callbacks, never synchronously in the effect
+  // body, so we don't trigger cascading renders.
   useEffect(() => {
-    if (status !== "preparing" && status !== "streaming") {
-      if (status === "idle") startRef.current = null;
-      return;
-    }
-    if (startRef.current === null) startRef.current = Date.now();
+    const prev = prevStatusRef.current;
+    prevStatusRef.current = status;
+
+    const isActive = status === "preparing" || status === "streaming";
+    if (!isActive) return; // freeze on complete/error; nothing to run on idle
+
+    const wasActive = prev === "preparing" || prev === "streaming";
+    if (!wasActive) startRef.current = Date.now(); // fresh run begins
+
     const tick = () => {
       if (startRef.current !== null) setElapsedMs(Date.now() - startRef.current);
     };

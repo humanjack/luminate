@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, it, expect, vi, afterEach } from "vitest";
+import { render, screen, act } from "@testing-library/react";
 import { LLMProgressPanel } from "@/components/workflow/llm-progress-panel";
 
 describe("LLMProgressPanel (#71)", () => {
@@ -36,5 +36,37 @@ describe("LLMProgressPanel (#71)", () => {
   it("renders nothing when idle with no prompt or output", () => {
     const { container } = render(<LLMProgressPanel status="idle" />);
     expect(container).toBeEmptyDOMElement();
+  });
+
+  describe("elapsed meter", () => {
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("restarts the clock for each run instead of carrying the idle gap (regression for #76 review)", () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(0);
+
+      const { rerender } = render(
+        <LLMProgressPanel status="streaming" output="x" />
+      );
+      // 5s of activity on the first run
+      act(() => vi.advanceTimersByTime(5000));
+      expect(screen.getByTestId("llm-elapsed").textContent).toBe("5.0s");
+
+      // First run completes — meter freezes at 5.0s
+      rerender(<LLMProgressPanel status="complete" output="x" />);
+      expect(screen.getByTestId("llm-elapsed").textContent).toBe("5.0s");
+
+      // A long idle gap passes before the user kicks off another generation
+      act(() => vi.advanceTimersByTime(30000));
+
+      // Second run begins (preparing) — consumers never go back to "idle"
+      rerender(<LLMProgressPanel status="preparing" />);
+      act(() => vi.advanceTimersByTime(200));
+
+      // Must reflect THIS run (~0.2s), not 35.2s since the first run started
+      expect(screen.getByTestId("llm-elapsed").textContent).toBe("0.2s");
+    });
   });
 });
