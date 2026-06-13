@@ -5,7 +5,20 @@ import {
   extractHeadings,
   parseReferences,
   slugify,
+  safeHref,
 } from "@/components/workflow/research-reader";
+
+describe("safeHref", () => {
+  it("passes http(s)/mailto/anchor/relative and blocks other schemes", () => {
+    expect(safeHref("https://x.com")).toBe("https://x.com");
+    expect(safeHref("http://x.com")).toBe("http://x.com");
+    expect(safeHref("mailto:a@b.com")).toBe("mailto:a@b.com");
+    expect(safeHref("#sec")).toBe("#sec");
+    expect(safeHref("/local")).toBe("/local");
+    expect(safeHref("javascript:alert(1)")).toBe("#");
+    expect(safeHref("data:text/html,x")).toBe("#");
+  });
+});
 
 describe("slugify", () => {
   it("kebab-cases and strips punctuation", () => {

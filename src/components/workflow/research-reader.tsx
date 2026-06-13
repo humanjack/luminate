@@ -9,6 +9,13 @@ export interface Heading {
   id: string;
 }
 
+/** Allow only safe URL schemes; fall back to "#" (defense-in-depth — React
+ *  already blocks javascript: URLs, but this avoids rendering inert junk). */
+export function safeHref(url: string): string {
+  const u = url.trim();
+  return /^(https?:|mailto:|#|\/)/i.test(u) ? u : "#";
+}
+
 export function slugify(text: string): string {
   return text
     .toLowerCase()
@@ -78,7 +85,7 @@ export function renderInline(
       nodes.push(
         <a
           key={key}
-          href={lm[2]}
+          href={safeHref(lm[2])}
           target="_blank"
           rel="noopener noreferrer"
           className="text-primary underline underline-offset-2 hover:opacity-80"
@@ -99,7 +106,7 @@ export function renderInline(
       );
       nodes.push(
         url ? (
-          <a key={key} href={url} target="_blank" rel="noopener noreferrer">
+          <a key={key} href={safeHref(url)} target="_blank" rel="noopener noreferrer">
             {chip}
           </a>
         ) : (
@@ -329,7 +336,7 @@ export function ResearchReader({ markdown, className }: ResearchReaderProps) {
             {refList.map(([num, url]) => (
               <li key={num}>
                 <a
-                  href={url}
+                  href={safeHref(url)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-primary underline underline-offset-2 break-all"
