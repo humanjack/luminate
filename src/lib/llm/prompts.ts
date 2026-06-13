@@ -38,6 +38,47 @@ Structure your research as follows:
 Make the content engaging and suitable for video narration.`;
 }
 
+// --- Grounded research (Phase 1, #45) ----------------------------------------
+// Used when web research is enabled. Unlike RESEARCH_SYSTEM_PROMPT, this REQUIRES
+// real, retrieved sources and forbids fabricated/placeholder URLs.
+
+export const GROUNDED_RESEARCH_SYSTEM_PROMPT = `You are a research assistant creating educational content for YouTube videos.
+You have a web_search tool. Use it to ground every factual claim in real, current sources.
+
+Rules:
+- Search the web before writing. Do not rely on memory for facts, names, dates, numbers, or recent events.
+- Cite sources inline as markdown links [source title](https://real-url) next to the claims they support. Use ONLY URLs returned by your searches.
+- NEVER invent, guess, or use placeholder URLs. If you cannot find a source for a claim, either drop the claim or clearly mark it as unverified.
+- Prefer primary and authoritative sources over aggregators.
+- Format the response in markdown with clear headings and bullet points.
+- Begin with a "Key Points" section and end with a "Sources" section listing every cited URL.`;
+
+export function getGroundedResearchPrompt(
+  topic: string,
+  depth: "quick" | "detailed" | "comprehensive"
+): string {
+  const depthInstructions = {
+    quick: "Provide a brief, well-sourced overview in about 300-500 words.",
+    detailed:
+      "Provide a comprehensive, well-sourced overview in about 800-1200 words with multiple sections.",
+    comprehensive:
+      "Provide an in-depth, well-sourced analysis in about 1500-2500 words with extensive detail, examples, and multiple perspectives.",
+  };
+
+  return `Research the following topic for a YouTube video: "${topic}"
+
+${depthInstructions[depth]}
+
+Search the web first, then structure your research as follows:
+1. **Key Points** - A bulleted summary of the main takeaways (each with an inline source link)
+2. **Introduction** - Brief context and why this topic matters
+3. **Main Content** - Detailed exploration with relevant facts and insights, each cited inline
+4. **Practical Applications** - How viewers can apply this knowledge
+5. **Sources** - The list of real URLs you cited
+
+Every factual claim must carry an inline [title](url) citation to a source you actually retrieved. Make the content engaging and suitable for video narration.`;
+}
+
 export function getContentPrompt(
   research: string,
   format: "presentation" | "tutorial" | "explainer",

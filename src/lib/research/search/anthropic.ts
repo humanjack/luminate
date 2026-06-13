@@ -12,6 +12,7 @@
  * and supports dynamic filtering on Opus 4.8/4.7/4.6 + Sonnet 4.6. No extra
  * API key is needed beyond the configured Anthropic key.
  */
+import { extractSourcesFromContent } from "../sources";
 import {
   SearchProvider,
   SearchProviderNotImplementedError,
@@ -35,8 +36,6 @@ export class AnthropicSearchProvider implements SearchProvider {
   }
 
   getToolDefinitions(): unknown[] {
-    // Phase 1 (#45) fills this in against the pinned SDK's tool typings,
-    // selecting the preferred tool version when available.
     return [
       {
         type: ANTHROPIC_WEB_SEARCH_TYPE,
@@ -44,5 +43,9 @@ export class AnthropicSearchProvider implements SearchProvider {
         max_uses: this.maxResults,
       },
     ];
+  }
+
+  extractSources(messageContent: unknown): SearchResult[] {
+    return extractSourcesFromContent(messageContent);
   }
 }
