@@ -45,9 +45,10 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
-      # Default vitest config only — deliberately NOT the API-calling eval harness
-      # in vitest.eval.config.ts, which needs a real Anthropic key.
-      - run: npm run test:run
+      # Runs the default vitest config WITH coverage so the ratcheted thresholds
+      # in vitest.config.ts are enforced in CI. Deliberately NOT the API-calling
+      # eval harness in vitest.eval.config.ts, which needs a real Anthropic key.
+      - run: npm run test:coverage
 
   build:
     name: Build (next build)
