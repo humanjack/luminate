@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import {
   Dialog,
   DialogContent,
@@ -137,6 +138,7 @@ export default function ProjectsPage() {
             <h1 className="text-3xl font-bold">Projects</h1>
           </div>
           <div className="flex items-center gap-2">
+            <ThemeToggle />
             {selectedIds.size > 0 && (
               <Button
                 variant="destructive"

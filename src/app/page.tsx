@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, FolderOpen, Settings, Video, Sparkles, Gauge } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { useProjectStore } from "@/stores/project-store";
 import Link from "next/link";
 
@@ -25,6 +26,9 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted">
       <div className="container mx-auto px-4 py-16">
+        <div className="flex justify-end">
+          <ThemeToggle />
+        </div>
         {/* Header */}
         <div className="text-center mb-16">
           <div className="flex items-center justify-center gap-3 mb-4">

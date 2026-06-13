@@ -1,9 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { ArrowLeft, Key, Mic, Video, Palette, Save, CheckCircle, XCircle, Loader2, AlertCircle, RefreshCw, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
+import {
+  getTheme,
+  subscribeTheme,
+  setTheme as applyThemePreference,
+  type Theme,
+} from "@/lib/theme";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -83,7 +90,6 @@ export default function SettingsPage() {
     maxSearchIterations,
     tavilyApiKey,
     braveApiKey,
-    theme,
     autoSave,
     autoSaveInterval,
     defaultRecordingMode,
@@ -111,6 +117,19 @@ export default function SettingsPage() {
     saveSettings,
     loadSettings,
   } = useSettingsStore();
+
+  // The applied theme is owned by src/lib/theme.ts (shared with the header
+  // ThemeToggle). The dropdown reads/writes it so both controls stay in sync;
+  // we also mirror into the settings store for persistence/export.
+  const activeTheme = useSyncExternalStore(
+    subscribeTheme,
+    getTheme,
+    () => "system" as Theme
+  );
+  const handleThemeChange = (value: Theme) => {
+    applyThemePreference(value);
+    setTheme(value);
+  };
 
   // Verification states
   const [anthropicVerification, setAnthropicVerification] = useState<VerificationResult>({ status: "idle" });
@@ -497,10 +516,13 @@ export default function SettingsPage() {
             </Link>
             <h1 className="text-3xl font-bold">Settings</h1>
           </div>
-          <Button onClick={handleSave}>
-            <Save className="w-4 h-4 mr-2" />
-            Save Settings
-          </Button>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <Button onClick={handleSave}>
+              <Save className="w-4 h-4 mr-2" />
+              Save Settings
+            </Button>
+          </div>
         </div>
 
         <Tabs defaultValue="api" className="space-y-6">
@@ -1295,7 +1317,7 @@ export default function SettingsPage() {
               <CardContent className="space-y-6">
                 <div className="space-y-2">
                   <Label>Theme</Label>
-                  <Select value={theme} onValueChange={(v) => setTheme(v as any)}>
+                  <Select value={activeTheme} onValueChange={(v) => handleThemeChange(v as Theme)}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>

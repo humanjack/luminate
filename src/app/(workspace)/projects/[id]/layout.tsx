@@ -7,6 +7,7 @@ import { ArrowLeft, Settings, MoreVertical, Trash2, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { WorkflowStepper } from "@/components/workflow/workflow-stepper";
 import { AgentRunPanel } from "@/components/workflow/agent-run-panel";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { useProjectStore } from "@/stores/project-store";
 import { useWorkflowStore } from "@/stores/workflow-store";
 import {
@@ -122,6 +123,7 @@ export default function ProjectLayout({ children, params }: ProjectLayoutProps) 
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <ThemeToggle />
           <Link href="/settings">
             <Button variant="ghost" size="icon">
               <Settings className="w-4 h-4" />
