@@ -213,19 +213,8 @@
   animation: grow-x 600ms ease-out both;
 }
 
-@keyframes draw-ring {
-  from {
-    stroke-dashoffset: var(--ring-len, 0);
-  }
-}
-
-.ring-draw {
-  animation: draw-ring 700ms ease-out both;
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .bar-grow,
-  .ring-draw {
+  .bar-grow {
     animation: none;
   }
 }
