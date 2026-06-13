@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, use } from "react";
-import { RefreshCw, AlertCircle, CheckCircle, ChevronLeft, ChevronRight, Settings } from "lucide-react";
+import { RefreshCw, AlertCircle, CheckCircle, ChevronLeft, ChevronRight, Settings, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { StepContainer } from "@/components/workflow/step-container";
 import { StepNavigation } from "@/components/workflow/step-navigation";
 import { PracticePanel } from "@/components/workflow/practice-panel";
+import { EmptyState } from "@/components/ui/empty-state";
 import { RadialScore } from "@/components/workflow/charts/radial-score";
 import { RadarChart } from "@/components/workflow/charts/radar-chart";
 import { WpmMeter } from "@/components/workflow/charts/wpm-meter";
@@ -328,23 +329,28 @@ export default function AnalysisPage({ params }: PageProps) {
                   </>
                 ) : (
                   <Card>
-                    <CardContent className="p-6 text-center">
-                      <p className="text-muted-foreground mb-4">
-                        No analysis yet for this recording
-                      </p>
-                      <Button
-                        onClick={() => analyzeRecording(currentSlideIndex)}
-                        disabled={isAnalyzing}
-                      >
-                        {analyzingIndex === currentSlideIndex ? (
-                          <span className="flex items-center gap-2">
-                            <RefreshCw className="h-4 w-4 animate-spin" />
-                            Analyzing...
-                          </span>
-                        ) : (
-                          "Analyze Recording"
-                        )}
-                      </Button>
+                    <CardContent>
+                      <EmptyState
+                        size="sm"
+                        icon={<Sparkles className="h-6 w-6" />}
+                        title="No analysis yet"
+                        description="Run the analysis to see pronunciation, fluency, and pacing for this recording."
+                        action={
+                          <Button
+                            onClick={() => analyzeRecording(currentSlideIndex)}
+                            disabled={isAnalyzing}
+                          >
+                            {analyzingIndex === currentSlideIndex ? (
+                              <span className="flex items-center gap-2">
+                                <RefreshCw className="h-4 w-4 animate-spin" />
+                                Analyzing...
+                              </span>
+                            ) : (
+                              "Analyze Recording"
+                            )}
+                          </Button>
+                        }
+                      />
                     </CardContent>
                   </Card>
                 )}
