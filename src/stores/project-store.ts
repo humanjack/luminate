@@ -25,6 +25,10 @@ export interface ProjectWithData extends Project {
   sources?: Source[];
   claims?: Claim[];
   outlineItems?: OutlineItem[];
+  // Lightweight preview fields returned by the list endpoint (for card art).
+  previewSlideMarkdown?: string | null;
+  previewSlideTheme?: string | null;
+  thumbnailSvg?: string | null;
 }
 
 interface ProjectState {

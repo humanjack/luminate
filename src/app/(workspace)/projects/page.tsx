@@ -10,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { EmptyState } from "@/components/ui/empty-state";
+import { ProjectCardPreview } from "@/components/workflow/project-card-preview";
 import {
   Dialog,
   DialogContent,
@@ -242,6 +243,17 @@ export default function ProjectsPage() {
                 }`}
               >
                 <CardContent className="p-4">
+                  <Link
+                    href={`/projects/${project.id}/research`}
+                    className="block mb-3"
+                  >
+                    <ProjectCardPreview
+                      name={project.name}
+                      thumbnailSvg={project.thumbnailSvg}
+                      slideMarkdown={project.previewSlideMarkdown}
+                      slideTheme={project.previewSlideTheme}
+                    />
+                  </Link>
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-3">
                       <div
@@ -254,8 +266,7 @@ export default function ProjectsPage() {
                           className="mr-2"
                         />
                       </div>
-                      <Link href={`/projects/${project.id}/research`} className="flex items-center gap-3 flex-1">
-                        <Video className="w-8 h-8 text-muted-foreground flex-shrink-0" />
+                      <Link href={`/projects/${project.id}/research`} className="flex items-center gap-2 flex-1 min-w-0">
                         <div className="min-w-0">
                           <h3 className="font-medium line-clamp-1">{project.name}</h3>
                           <div className="flex items-center gap-2 text-xs text-muted-foreground">

@@ -2,9 +2,10 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, FolderOpen, Settings, Video, Sparkles, Gauge } from "lucide-react";
+import { Plus, FolderOpen, Settings, Sparkles, Gauge } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { ProjectCardPreview } from "@/components/workflow/project-card-preview";
 import { useProjectStore } from "@/stores/project-store";
 import Link from "next/link";
 
@@ -95,9 +96,16 @@ export default function HomePage() {
                 <Link key={project.id} href={`/projects/${project.id}/research`}>
                   <Card className="cursor-pointer hover:border-primary transition-colors">
                     <CardContent className="flex items-center justify-between py-4">
-                      <div className="flex items-center gap-4">
-                        <Video className="h-8 w-8 text-muted-foreground" />
-                        <div>
+                      <div className="flex items-center gap-4 min-w-0">
+                        <div className="w-24 shrink-0">
+                          <ProjectCardPreview
+                            name={project.name}
+                            thumbnailSvg={project.thumbnailSvg}
+                            slideMarkdown={project.previewSlideMarkdown}
+                            slideTheme={project.previewSlideTheme}
+                          />
+                        </div>
+                        <div className="min-w-0">
                           <h3 className="font-medium">{project.name}</h3>
                           <p className="text-sm text-muted-foreground">
                             Step {project.currentStep} of 7 • Updated{" "}

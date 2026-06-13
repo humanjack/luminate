@@ -27,6 +27,8 @@ vi.mock("@/lib/db", () => ({
     })),
   },
   projects: { id: "id", updatedAt: "updatedAt" },
+  slides: { projectId: "project_id", index: "index", markdown: "markdown", theme: "theme" },
+  thumbnails: { projectId: "project_id", svg: "svg", selected: "selected" },
 }));
 
 // Mock uuid
@@ -61,15 +63,17 @@ describe("Projects API", () => {
   });
 
   describe("GET /api/projects", () => {
-    it("should return list of projects", async () => {
+    it("should return list of projects with null preview fields when none exist", async () => {
       const mockProjects = [
         { id: "1", name: "Project 1", currentStep: 1, status: "draft" },
         { id: "2", name: "Project 2", currentStep: 3, status: "in_progress" },
       ];
 
+      // projects query → orderBy; slides/thumbnails queries → where (empty)
       (db.select as ReturnType<typeof vi.fn>).mockReturnValue({
         from: vi.fn().mockReturnValue({
           orderBy: vi.fn().mockResolvedValue(mockProjects),
+          where: vi.fn().mockResolvedValue([]),
         }),
       });
 
@@ -77,13 +81,47 @@ describe("Projects API", () => {
       const data = await response.json();
 
       expect(response.status).toBe(200);
-      expect(data).toEqual(mockProjects);
+      expect(data).toEqual(
+        mockProjects.map((p) => ({
+          ...p,
+          previewSlideMarkdown: null,
+          previewSlideTheme: null,
+          thumbnailSvg: null,
+        }))
+      );
+    });
+
+    it("enriches projects with first-slide and selected-thumbnail previews", async () => {
+      const mockProjects = [{ id: "1", name: "Project 1", currentStep: 3, status: "in_progress" }];
+      const whereMock = vi
+        .fn()
+        .mockResolvedValueOnce([{ projectId: "1", markdown: "# Hi", theme: "dark" }]) // slides
+        .mockResolvedValueOnce([{ projectId: "1", svg: "<svg/>" }]); // thumbnails
+
+      (db.select as ReturnType<typeof vi.fn>).mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          orderBy: vi.fn().mockResolvedValue(mockProjects),
+          where: whereMock,
+        }),
+      });
+
+      const response = await GET();
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data[0]).toMatchObject({
+        id: "1",
+        previewSlideMarkdown: "# Hi",
+        previewSlideTheme: "dark",
+        thumbnailSvg: "<svg/>",
+      });
     });
 
     it("should return empty array when no projects exist", async () => {
       (db.select as ReturnType<typeof vi.fn>).mockReturnValue({
         from: vi.fn().mockReturnValue({
           orderBy: vi.fn().mockResolvedValue([]),
+          where: vi.fn().mockResolvedValue([]),
         }),
       });
 
