@@ -37,14 +37,44 @@ export function LLMProgressPanel({
   const [isExpanded, setIsExpanded] = useState(true);
   const [showSystemPrompt, setShowSystemPrompt] = useState(false);
   const [showDebug, setShowDebug] = useState(false);
+  const [elapsedMs, setElapsedMs] = useState(0);
   const outputRef = useRef<HTMLPreElement>(null);
+  const startRef = useRef<number | null>(null);
 
-  // Auto-scroll output when streaming
+  // Auto-scroll output when streaming, but only if the user is already pinned
+  // to the bottom — don't yank them back up if they've scrolled to re-read.
   useEffect(() => {
-    if (status === "streaming" && outputRef.current) {
-      outputRef.current.scrollTop = outputRef.current.scrollHeight;
-    }
+    const el = outputRef.current;
+    if (status !== "streaming" || !el) return;
+    const pinned =
+      el.scrollHeight - el.scrollTop - el.clientHeight < 24;
+    if (pinned) el.scrollTop = el.scrollHeight;
   }, [output, status]);
+
+  // Elapsed-time meter: runs while preparing/streaming, freezes on
+  // complete/error, resets when the panel returns to idle. All state writes
+  // happen in async callbacks (timer/cleanup), never synchronously in the
+  // effect body, so we don't trigger cascading renders.
+  useEffect(() => {
+    if (status !== "preparing" && status !== "streaming") {
+      if (status === "idle") startRef.current = null;
+      return;
+    }
+    if (startRef.current === null) startRef.current = Date.now();
+    const tick = () => {
+      if (startRef.current !== null) setElapsedMs(Date.now() - startRef.current);
+    };
+    const first = setTimeout(tick, 0); // deferred first paint of the meter
+    const iv = setInterval(tick, 100);
+    return () => {
+      clearTimeout(first);
+      clearInterval(iv);
+    };
+  }, [status]);
+
+  const showElapsed =
+    (status === "preparing" || status === "streaming" || status === "complete") &&
+    elapsedMs > 0;
 
   // Auto-expand when activity starts
   useEffect(() => {
@@ -119,6 +149,15 @@ export function LLMProgressPanel({
             <CardTitle className="text-sm font-medium">{getStatusText()}</CardTitle>
           </div>
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            {showElapsed && (
+              <span
+                data-testid="llm-elapsed"
+                className="tabular-nums font-mono text-foreground/70"
+              >
+                {(elapsedMs / 1000).toFixed(1)}s
+              </span>
+            )}
+            {showElapsed && <span>|</span>}
             <span>{provider}</span>
             {model && (
               <>
@@ -170,6 +209,24 @@ export function LLMProgressPanel({
             </div>
           )}
 
+          {/* Prepare skeleton — shown before the first token arrives */}
+          {status === "preparing" && !output && (
+            <div className="space-y-2" data-testid="llm-skeleton">
+              <div className="flex items-center gap-2">
+                <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
+                <span className="text-xs font-medium text-muted-foreground">
+                  Warming up the model…
+                </span>
+              </div>
+              <div className="space-y-2 rounded-md bg-muted/50 p-3">
+                <div className="llm-skeleton-line h-3 w-[85%]" />
+                <div className="llm-skeleton-line h-3 w-[70%]" />
+                <div className="llm-skeleton-line h-3 w-[90%]" />
+                <div className="llm-skeleton-line h-3 w-[55%]" />
+              </div>
+            </div>
+          )}
+
           {/* Output */}
           {(output || status === "streaming") && (
             <div className="space-y-2">
@@ -189,13 +246,12 @@ export function LLMProgressPanel({
               </div>
               <pre
                 ref={outputRef}
-                className={cn(
-                  "text-xs bg-muted/50 p-3 rounded-md overflow-auto max-h-64 whitespace-pre-wrap font-mono border-l-2 border-green-500",
-                  status === "streaming" && "animate-pulse"
-                )}
+                className="text-xs bg-muted/50 p-3 rounded-md overflow-auto max-h-64 whitespace-pre-wrap font-mono border-l-2 border-green-500"
               >
                 {output || "Waiting for response..."}
-                {status === "streaming" && <span className="inline-block w-2 h-4 bg-green-500 ml-0.5 animate-pulse" />}
+                {status === "streaming" && (
+                  <span className="llm-caret" data-testid="llm-caret" aria-hidden />
+                )}
               </pre>
             </div>
           )}
