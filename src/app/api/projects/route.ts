@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, projects } from "@/lib/db";
-import { desc } from "drizzle-orm";
+import { db, projects, slides, thumbnails } from "@/lib/db";
+import { desc, eq } from "drizzle-orm";
 import { v4 as uuid } from "uuid";
 
-// GET /api/projects - List all projects
+// GET /api/projects - List all projects (enriched with a lightweight preview:
+// the first slide's markdown and the selected thumbnail's SVG, for card art).
 export async function GET() {
   try {
     const allProjects = await db
@@ -11,7 +12,31 @@ export async function GET() {
       .from(projects)
       .orderBy(desc(projects.updatedAt));
 
-    return NextResponse.json(allProjects);
+    const firstSlides = await db
+      .select({
+        projectId: slides.projectId,
+        markdown: slides.markdown,
+        theme: slides.theme,
+      })
+      .from(slides)
+      .where(eq(slides.index, 0));
+
+    const selectedThumbs = await db
+      .select({ projectId: thumbnails.projectId, svg: thumbnails.svg })
+      .from(thumbnails)
+      .where(eq(thumbnails.selected, true));
+
+    const slideMap = new Map(firstSlides.map((s) => [s.projectId, s]));
+    const thumbMap = new Map(selectedThumbs.map((t) => [t.projectId, t.svg]));
+
+    const enriched = allProjects.map((p) => ({
+      ...p,
+      previewSlideMarkdown: slideMap.get(p.id)?.markdown ?? null,
+      previewSlideTheme: slideMap.get(p.id)?.theme ?? null,
+      thumbnailSvg: thumbMap.get(p.id) ?? null,
+    }));
+
+    return NextResponse.json(enriched);
   } catch (error) {
     console.error("Failed to fetch projects:", error);
     return NextResponse.json(
