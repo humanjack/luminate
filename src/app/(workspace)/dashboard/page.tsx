@@ -16,6 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { DashboardSnapshot } from "@/lib/analytics/aggregate";
+import { donutSegments } from "@/lib/analytics/donut";
 
 const STEP_LABELS = [
   "Research",
@@ -152,18 +153,32 @@ function DashboardBody({ data }: { data: DashboardSnapshot }) {
           </CardContent>
         </Card>
 
-        {/* Trend sparkline */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Completions, last 8 weeks</CardTitle>
-            <p className="text-xs text-muted-foreground">
-              Oldest week on the left → most recent on the right.
-            </p>
-          </CardHeader>
-          <CardContent>
-            <Sparkline values={data.weeklyTrend} />
-          </CardContent>
-        </Card>
+        {/* Trend + status donut */}
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Completions, last 8 weeks</CardTitle>
+              <p className="text-xs text-muted-foreground">
+                Oldest week on the left → most recent on the right.
+              </p>
+            </CardHeader>
+            <CardContent>
+              <Sparkline values={data.weeklyTrend} />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Status mix</CardTitle>
+              <p className="text-xs text-muted-foreground">
+                How your projects split across the pipeline.
+              </p>
+            </CardHeader>
+            <CardContent>
+              <StatusDonut byStatus={data.byStatus} />
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -215,21 +230,92 @@ function StepFunnel({ data }: { data: number[] }) {
   const counts = data.slice(1, 8);
   const max = Math.max(1, ...counts);
   return (
-    <div className="space-y-2" data-testid="step-funnel">
+    <div className="space-y-2.5" data-testid="step-funnel">
       {counts.map((n, i) => (
-        <div key={i} className="flex items-center gap-3 text-sm">
+        <div key={i} className="group flex items-center gap-3 text-sm">
           <div className="w-24 shrink-0 text-muted-foreground tabular-nums">
             {i + 1}. {STEP_LABELS[i]}
           </div>
-          <div className="flex-1 h-6 bg-muted rounded-md overflow-hidden">
+          <div className="flex-1 h-7 bg-muted/70 rounded-md overflow-hidden">
             <div
-              className="h-full bg-indigo-500 transition-all"
-              style={{ width: `${(n / max) * 100}%` }}
+              className="bar-grow h-full rounded-md bg-gradient-to-r from-indigo-500 to-violet-500 transition-[filter] group-hover:brightness-110"
+              style={{ width: `${(n / max) * 100}%`, animationDelay: `${i * 55}ms` }}
             />
           </div>
-          <div className="w-8 text-right tabular-nums font-medium">{n}</div>
+          <div className="w-8 text-right tabular-nums font-semibold">{n}</div>
         </div>
       ))}
+    </div>
+  );
+}
+
+const STATUS_META: Array<{
+  key: "completed" | "in_progress" | "draft";
+  label: string;
+  color: string;
+}> = [
+  { key: "completed", label: "Completed", color: "#10b981" },
+  { key: "in_progress", label: "In progress", color: "#6366f1" },
+  { key: "draft", label: "Draft", color: "#94a3b8" },
+];
+
+function StatusDonut({
+  byStatus,
+}: {
+  byStatus: DashboardSnapshot["byStatus"];
+}) {
+  const size = 132;
+  const stroke = 16;
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  const values = STATUS_META.map((s) => byStatus[s.key] ?? 0);
+  const total = values.reduce((a, b) => a + b, 0);
+  const segments = donutSegments(values, c);
+
+  return (
+    <div className="flex items-center gap-5" data-testid="status-donut">
+      <div className="relative shrink-0" style={{ width: size, height: size }}>
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90">
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={r}
+            fill="none"
+            strokeWidth={stroke}
+            className="stroke-muted"
+          />
+          {total > 0 &&
+            segments.map((seg, i) => (
+              <circle
+                key={STATUS_META[i].key}
+                cx={size / 2}
+                cy={size / 2}
+                r={r}
+                fill="none"
+                strokeWidth={stroke}
+                stroke={STATUS_META[i].color}
+                strokeDasharray={`${seg.length} ${c - seg.length}`}
+                strokeDashoffset={seg.offset}
+              />
+            ))}
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <span className="text-2xl font-semibold tabular-nums leading-none">{total}</span>
+          <span className="text-[11px] text-muted-foreground">projects</span>
+        </div>
+      </div>
+      <ul className="space-y-1.5 text-sm">
+        {STATUS_META.map((s, i) => (
+          <li key={s.key} className="flex items-center gap-2">
+            <span
+              className="h-2.5 w-2.5 rounded-full shrink-0"
+              style={{ backgroundColor: s.color }}
+            />
+            <span className="text-muted-foreground">{s.label}</span>
+            <span className="ml-auto tabular-nums font-medium">{values[i]}</span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
@@ -247,22 +333,42 @@ function Sparkline({ values }: { values: number[] }) {
     })
     .join(" ");
 
+  const areaPoints = `0,${height} ${points} ${width},${height}`;
+
   return (
     <div data-testid="sparkline">
       <svg viewBox={`0 0 ${width} ${height + 30}`} className="w-full">
+        <defs>
+          <linearGradient id="spark-fill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="rgb(99 102 241)" stopOpacity={0.35} />
+            <stop offset="100%" stopColor="rgb(99 102 241)" stopOpacity={0} />
+          </linearGradient>
+        </defs>
+        <polygon points={areaPoints} fill="url(#spark-fill)" stroke="none" />
         <polyline
           points={points}
           fill="none"
           stroke="currentColor"
           strokeWidth={2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
           className="text-indigo-500"
         />
         {values.map((v, i) => {
           const x = i * step;
           const y = height - (v / max) * height;
+          const isNow = i === values.length - 1;
           return (
             <g key={i}>
-              <circle cx={x} cy={y} r={3} className="fill-indigo-500" />
+              {isNow && (
+                <circle cx={x} cy={y} r={6} className="fill-indigo-500/25" />
+              )}
+              <circle
+                cx={x}
+                cy={y}
+                r={isNow ? 4 : 3}
+                className="fill-indigo-500"
+              />
               <text
                 x={x}
                 y={height + 18}
