@@ -5,6 +5,8 @@ import { Check, Image as ImageIcon, Loader2, RefreshCw, Sparkles } from "lucide-
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { YouTubePreview } from "@/components/workflow/youtube-preview";
+import { useProjectStore } from "@/stores/project-store";
 import type { Thumbnail } from "@/lib/db/schema";
 import type { ThumbnailPreset } from "@/lib/thumbnails/types";
 
@@ -29,6 +31,11 @@ export function ThumbnailPicker({ projectId }: ThumbnailPickerProps) {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [seoTitle, setSeoTitle] = useState("");
+
+  const currentProject = useProjectStore((s) => s.currentProject);
+  const projectName =
+    currentProject?.id === projectId ? currentProject.name : "";
 
   useEffect(() => {
     let cancelled = false;
@@ -38,6 +45,23 @@ export function ThumbnailPicker({ projectId }: ThumbnailPickerProps) {
         if (!cancelled) setVariants(data);
       })
       .finally(() => !cancelled && setLoading(false));
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId]);
+
+  // Pull the chosen SEO title so the preview shows the real headline; the
+  // project name is the fallback. Failures are silent (title just falls back).
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/projects/${projectId}/video-metadata`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (cancelled || !data) return;
+        const t = data.titles?.[data.selectedTitleIndex ?? 0]?.text;
+        if (t) setSeoTitle(t);
+      })
+      .catch(() => {});
     return () => {
       cancelled = true;
     };
@@ -159,6 +183,19 @@ export function ThumbnailPicker({ projectId }: ThumbnailPickerProps) {
             })}
           </div>
         )}
+
+        {(() => {
+          const selected = variants.find((v) => v.selected) ?? variants[0];
+          if (!selected) return null;
+          return (
+            <div className="mt-4 border-t pt-4">
+              <YouTubePreview
+                imageUrl={svgToDataUrl(selected.svg)}
+                title={seoTitle || projectName || "Your video title goes here"}
+              />
+            </div>
+          );
+        })()}
       </CardContent>
     </Card>
   );
