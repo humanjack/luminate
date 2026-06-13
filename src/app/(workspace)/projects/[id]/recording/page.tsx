@@ -85,19 +85,24 @@ export default function RecordingPage({ params }: PageProps) {
 
   // Audio level monitoring
   useEffect(() => {
-    if (isRecording && !isPaused && analyserRef.current) {
-      const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
-      const updateLevel = () => {
-        if (!analyserRef.current) return;
-        analyserRef.current.getByteFrequencyData(dataArray);
-        // Downsample the spectrum into ~32 bars for a live waveform.
-        setLevels(normalizeBars(Array.from(dataArray), 32));
-        if (isRecording && !isPaused) {
-          requestAnimationFrame(updateLevel);
-        }
-      };
-      updateLevel();
-    }
+    if (!(isRecording && !isPaused && analyserRef.current)) return;
+    const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
+    let raf = 0;
+    let active = true;
+    const updateLevel = () => {
+      if (!active || !analyserRef.current) return;
+      analyserRef.current.getByteFrequencyData(dataArray);
+      // Downsample the spectrum into ~32 bars for a live waveform.
+      setLevels(normalizeBars(Array.from(dataArray), 32));
+      raf = requestAnimationFrame(updateLevel);
+    };
+    updateLevel();
+    // Cancel the loop when recording stops/pauses or on unmount, so we don't
+    // leave an orphaned rAF re-scheduling forever.
+    return () => {
+      active = false;
+      cancelAnimationFrame(raf);
+    };
   }, [isRecording, isPaused]);
 
   // Teleprompter scrolling
