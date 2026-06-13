@@ -10,11 +10,13 @@ export interface ResearchSource {
 }
 
 export interface StreamingMessage {
-  type: "text" | "done" | "error" | "sources";
-  /** Text payload for text/done/error events. Empty/absent on sources events. */
+  type: "text" | "done" | "error" | "sources" | "progress";
+  /** Text payload for text/done/error events. Empty/absent on sources/progress events. */
   content: string;
   /** Present for `sources` events (grounded research, Phase 1). */
   sources?: ResearchSource[];
+  /** Present for `progress` events (agentic loop, Phase 2). */
+  label?: string;
 }
 
 // Parses an SSE byte stream into StreamingMessage objects.

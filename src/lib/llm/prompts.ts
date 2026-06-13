@@ -79,6 +79,42 @@ Search the web first, then structure your research as follows:
 Every factual claim must carry an inline [title](url) citation to a source you actually retrieved. Make the content engaging and suitable for video narration.`;
 }
 
+// --- Agentic research (Phase 2, #46) -----------------------------------------
+// Wraps the grounded prompt with an explicit sub-question plan so the model
+// covers the topic broadly. Used with the GROUNDED_RESEARCH_SYSTEM_PROMPT.
+
+export function getAgenticResearchPrompt(
+  topic: string,
+  depth: "quick" | "detailed" | "comprehensive",
+  subQuestions: string[]
+): string {
+  const depthInstructions = {
+    quick: "Provide a brief, well-sourced overview in about 300-500 words.",
+    detailed:
+      "Provide a comprehensive, well-sourced overview in about 800-1200 words with multiple sections.",
+    comprehensive:
+      "Provide an in-depth, well-sourced analysis in about 1500-2500 words with extensive detail, examples, and multiple perspectives.",
+  };
+
+  const plan = subQuestions.map((q, i) => `${i + 1}. ${q}`).join("\n");
+
+  return `Research the following topic for a YouTube video: "${topic}"
+
+${depthInstructions[depth]}
+
+Investigate each of these sub-questions with web searches, then synthesize one cohesive brief (do not answer them as a disconnected Q&A list):
+${plan}
+
+Structure the final brief as:
+1. **Key Points** - A bulleted summary of the main takeaways (each with an inline source link)
+2. **Introduction** - Brief context and why this topic matters
+3. **Main Content** - Detailed exploration covering the sub-questions above, each claim cited inline
+4. **Practical Applications** - How viewers can apply this knowledge
+5. **Sources** - The list of real URLs you cited
+
+Every factual claim must carry an inline [title](url) citation to a source you actually retrieved. Do not use placeholder URLs. Make the content engaging and suitable for video narration.`;
+}
+
 export function getContentPrompt(
   research: string,
   format: "presentation" | "tutorial" | "explainer",

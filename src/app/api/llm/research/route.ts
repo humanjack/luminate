@@ -3,7 +3,7 @@ import { NextRequest } from "next/server";
 import { proxyLLMStream, jsonError } from "@/lib/llm/proxy";
 import { loadResearchGenerationConfig } from "@/lib/research/config";
 import { useInProcessResearch, type ResearchDepth } from "@/lib/research/generate";
-import { generateGroundedResearch } from "@/lib/research/generate-grounded";
+import { generateAgenticResearch } from "@/lib/research/loop";
 
 export const runtime = "nodejs";
 
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     const stream = new ReadableStream({
       async start(controller) {
         try {
-          for await (const event of generateGroundedResearch(config, topic, depth)) {
+          for await (const event of generateAgenticResearch(config, topic, depth)) {
             controller.enqueue(sse(event));
           }
         } catch (error) {
