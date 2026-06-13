@@ -1,0 +1,35 @@
+version: 2
+
+updates:
+  # Application dependencies (npm at the repo root).
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    # Batch low-risk updates so reviewers aren't flooded with one PR per package.
+    groups:
+      radix-ui:
+        patterns:
+          - "@radix-ui/*"
+      types:
+        patterns:
+          - "@types/*"
+      dev-dependencies:
+        dependency-type: development
+    ignore:
+      # Framework majors are a deliberate, human migration decision in a
+      # Next-16 / React-19 app — not something to auto-bump.
+      - dependency-name: "next"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "react"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "react-dom"
+        update-types: ["version-update:semver-major"]
+
+  # Keep the GitHub Actions used by CI pinned and patched.
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
