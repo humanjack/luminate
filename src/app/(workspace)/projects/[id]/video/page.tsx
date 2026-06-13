@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, use, useMemo } from "react";
-import { Play, Pause, Download, Upload, Film, MonitorPlay } from "lucide-react";
+import { Play, Pause, Download, Upload, Film, MonitorPlay, Captions } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,8 +23,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { StepContainer } from "@/components/workflow/step-container";
-import { EmptyState } from "@/components/ui/empty-state";
 import { ExportResult } from "@/components/workflow/export-result";
+import { VideoPreviewStage } from "@/components/workflow/video-preview-stage";
 import { ReadinessPanel } from "@/components/workflow/readiness-panel";
 import { SeoCopilotPanel } from "@/components/workflow/seo-copilot-panel";
 import { ThumbnailPicker } from "@/components/workflow/thumbnail-picker";
@@ -51,6 +51,7 @@ export default function VideoPage({ params }: PageProps) {
   const [exportStatus, setExportStatus] = useState<ExportStatus>("idle");
   const [exportProgress, setExportProgress] = useState(0);
   const [previewSlide, setPreviewSlide] = useState(0);
+  const [showCaptions, setShowCaptions] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [showYouTubeDialog, setShowYouTubeDialog] = useState(false);
@@ -182,23 +183,11 @@ export default function VideoPage({ params }: PageProps) {
     setIsPlaying(!isPlaying);
   };
 
-  // Simple slide preview renderer
-  const renderSlidePreview = (markdown: string) => {
-    return (
-      <div
-        className="w-full h-full p-8 flex flex-col justify-center bg-gradient-to-br from-primary/10 to-primary/5"
-        dangerouslySetInnerHTML={{
-          __html: markdown
-            .replace(/^# (.+)$/gm, '<h1 class="text-3xl font-bold mb-4">$1</h1>')
-            .replace(/^## (.+)$/gm, '<h2 class="text-2xl font-semibold mb-3">$1</h2>')
-            .replace(/^- (.+)$/gm, '<li class="ml-4">$1</li>')
-            .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-            .replace(/<!--[\s\S]*?-->/g, "")
-            .replace(/\n/g, "<br />"),
-        }}
-      />
-    );
-  };
+  // Caption for the active slide: prefer a script matched by slide index,
+  // else fall back to positional order.
+  const captionText =
+    scripts.find((s) => s.slideIndex === previewSlide)?.text ??
+    scripts[previewSlide]?.text;
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -248,28 +237,13 @@ export default function VideoPage({ params }: PageProps) {
               <Label>Preview</Label>
 
               {/* Video Preview Area */}
-              <div className="aspect-video bg-black rounded-lg overflow-hidden relative">
-                {slides[previewSlide] ? (
-                  <div className="w-full h-full">
-                    {renderSlidePreview(slides[previewSlide].markdown)}
-                  </div>
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-white/90">
-                    <EmptyState
-                      size="sm"
-                      className="[&_p]:text-white/70"
-                      icon={<Film className="w-6 h-6" />}
-                      title="No slides to preview"
-                      description="Complete the earlier steps to preview your video here."
-                    />
-                  </div>
-                )}
-
-                {/* Slide indicator */}
-                <div className="absolute top-4 right-4 bg-black/50 px-2 py-1 rounded text-white text-sm">
-                  Slide {previewSlide + 1} / {slides.length}
-                </div>
-              </div>
+              <VideoPreviewStage
+                slides={slides}
+                index={previewSlide}
+                transition={transition as "none" | "fade" | "slide"}
+                caption={captionText}
+                showCaptions={showCaptions}
+              />
 
               {/* Playback Controls */}
               <div className="space-y-2">
@@ -299,6 +273,17 @@ export default function VideoPage({ params }: PageProps) {
                   <span className="text-sm font-mono min-w-[80px] text-right">
                     {formatDuration(currentTime)} / {formatDuration(totalDuration)}
                   </span>
+
+                  <Button
+                    variant={showCaptions ? "secondary" : "outline"}
+                    size="icon"
+                    onClick={() => setShowCaptions((v) => !v)}
+                    aria-pressed={showCaptions}
+                    title={showCaptions ? "Hide captions" : "Show captions"}
+                    data-testid="toggle-captions"
+                  >
+                    <Captions className="h-4 w-4" />
+                  </Button>
                 </div>
 
                 {/* Timeline */}

@@ -218,3 +218,40 @@
     animation: none;
   }
 }
+
+/* Video preview slide transitions (#65) — replayed on slide change via React
+   key remount. Reduced-motion shows the slide instantly. */
+@keyframes stage-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes stage-slide {
+  from {
+    opacity: 0;
+    transform: translateX(28px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.stage-fade {
+  animation: stage-fade 350ms ease-out;
+}
+
+.stage-slide {
+  animation: stage-slide 380ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stage-fade,
+  .stage-slide {
+    animation: none;
+  }
+}
