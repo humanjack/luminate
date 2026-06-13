@@ -9,6 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { StepContainer } from "@/components/workflow/step-container";
 import { StepNavigation } from "@/components/workflow/step-navigation";
+import { Waveform, normalizeBars, placeholderBars } from "@/components/workflow/waveform";
 import { useProjectStore } from "@/stores/project-store";
 import { useSettingsStore } from "@/stores/settings-store";
 import { formatDuration } from "@/lib/utils";
@@ -38,7 +39,8 @@ export default function RecordingPage({ params }: PageProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
-  const [audioLevel, setAudioLevel] = useState(0);
+  const [levels, setLevels] = useState<number[]>([]);
+  const [playbackProgress, setPlaybackProgress] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [teleprompterActive, setTeleprompterActive] = useState(false);
   // Scroll position lives in a ref — it's only ever written to scrollTop,
@@ -88,8 +90,8 @@ export default function RecordingPage({ params }: PageProps) {
       const updateLevel = () => {
         if (!analyserRef.current) return;
         analyserRef.current.getByteFrequencyData(dataArray);
-        const average = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
-        setAudioLevel(average / 255);
+        // Downsample the spectrum into ~32 bars for a live waveform.
+        setLevels(normalizeBars(Array.from(dataArray), 32));
         if (isRecording && !isPaused) {
           requestAnimationFrame(updateLevel);
         }
@@ -245,9 +247,17 @@ export default function RecordingPage({ params }: PageProps) {
       if (audioRef.current) {
         audioRef.current.pause();
       }
-      audioRef.current = new Audio(currentRecording.audioUrl);
-      audioRef.current.onended = () => setIsPlaying(false);
-      audioRef.current.play();
+      const audio = new Audio(currentRecording.audioUrl);
+      audioRef.current = audio;
+      audio.onended = () => {
+        setIsPlaying(false);
+        setPlaybackProgress(0);
+      };
+      audio.ontimeupdate = () => {
+        const total = audio.duration || currentRecording.duration || 0;
+        if (total > 0) setPlaybackProgress(Math.min(1, audio.currentTime / total));
+      };
+      audio.play();
       setIsPlaying(true);
     }
   };
@@ -257,6 +267,22 @@ export default function RecordingPage({ params }: PageProps) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
       setIsPlaying(false);
+      setPlaybackProgress(0);
+    }
+  };
+
+  // Click-to-seek on the playback waveform.
+  const seekPlayback = (ratio: number) => {
+    const total = currentRecording?.duration || 0;
+    if (!audioRef.current) {
+      playRecording();
+    }
+    if (audioRef.current) {
+      const dur = audioRef.current.duration || total;
+      if (dur > 0) {
+        audioRef.current.currentTime = ratio * dur;
+        setPlaybackProgress(ratio);
+      }
     }
   };
 
@@ -363,18 +389,18 @@ export default function RecordingPage({ params }: PageProps) {
                 </ScrollArea>
               </Card>
 
-              {/* Audio Level Meter */}
+              {/* Live input waveform */}
               {showWaveform && (
                 <div className="space-y-2">
                   <Label>Audio Level</Label>
-                  <div className="h-4 bg-muted rounded-full overflow-hidden">
-                    <div
-                      className={cn(
-                        "h-full transition-all duration-100",
-                        audioLevel > 0.8 ? "bg-red-500" :
-                        audioLevel > 0.5 ? "bg-yellow-500" : "bg-green-500"
-                      )}
-                      style={{ width: `${audioLevel * 100}%` }}
+                  <div className="rounded-lg bg-muted/50 px-3 py-2">
+                    <Waveform
+                      bars={
+                        isRecording && !isPaused && levels.length > 0
+                          ? levels
+                          : new Array(32).fill(0.04)
+                      }
+                      live={isRecording && !isPaused}
                     />
                   </div>
                 </div>
@@ -501,6 +527,23 @@ export default function RecordingPage({ params }: PageProps) {
                             Delete
                           </Button>
                         </div>
+                      </div>
+
+                      {/* Playback waveform + scrubber. The waveform shape is a
+                          deterministic placeholder (per-sample data isn't
+                          available here); the playhead and seek are live. */}
+                      <Waveform
+                        bars={placeholderBars(Math.round(currentRecording.duration) || 1)}
+                        progress={playbackProgress}
+                        onSeek={seekPlayback}
+                      />
+                      <div className="flex justify-between text-xs text-muted-foreground tabular-nums">
+                        <span>
+                          {formatDuration(
+                            Math.round(playbackProgress * currentRecording.duration)
+                          )}
+                        </span>
+                        <span>{formatDuration(currentRecording.duration)}</span>
                       </div>
                     </div>
                   )}
