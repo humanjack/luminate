@@ -257,6 +257,7 @@ export default function VideoPage({ params }: PageProps) {
                   <div className="w-full h-full flex items-center justify-center text-white/90">
                     <EmptyState
                       size="sm"
+                      className="[&_p]:text-white/70"
                       icon={<Film className="w-6 h-6" />}
                       title="No slides to preview"
                       description="Complete the earlier steps to preview your video here."
