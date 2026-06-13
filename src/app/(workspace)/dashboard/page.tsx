@@ -16,6 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { EmptyState } from "@/components/ui/empty-state";
 import type { DashboardSnapshot } from "@/lib/analytics/aggregate";
 import { donutSegments } from "@/lib/analytics/donut";
 
@@ -87,20 +88,20 @@ export default function DashboardPage() {
         )}
         {data && data.totalProjects === 0 && (
           <Card className="max-w-xl mx-auto">
-            <CardContent className="text-center py-12 space-y-4">
-              <Sparkles className="w-10 h-10 mx-auto text-primary" />
-              <div>
-                <h2 className="text-lg font-semibold">Nothing to chart yet</h2>
-                <p className="text-sm text-muted-foreground">
-                  Create your first project and the dashboard will fill in automatically.
-                </p>
-              </div>
-              <Link href="/">
-                <Button>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create a project
-                </Button>
-              </Link>
+            <CardContent>
+              <EmptyState
+                icon={<Sparkles className="w-8 h-8" />}
+                title="Nothing to chart yet"
+                description="Create your first project and the dashboard will fill in automatically."
+                action={
+                  <Link href="/">
+                    <Button>
+                      <Plus className="w-4 h-4 mr-2" />
+                      Create a project
+                    </Button>
+                  </Link>
+                }
+              />
             </CardContent>
           </Card>
         )}

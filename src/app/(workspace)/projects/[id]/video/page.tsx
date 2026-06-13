@@ -23,6 +23,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { StepContainer } from "@/components/workflow/step-container";
+import { EmptyState } from "@/components/ui/empty-state";
 import { ExportResult } from "@/components/workflow/export-result";
 import { ReadinessPanel } from "@/components/workflow/readiness-panel";
 import { SeoCopilotPanel } from "@/components/workflow/seo-copilot-panel";
@@ -253,8 +254,14 @@ export default function VideoPage({ params }: PageProps) {
                     {renderSlidePreview(slides[previewSlide].markdown)}
                   </div>
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                    No slides to preview
+                  <div className="w-full h-full flex items-center justify-center text-white/90">
+                    <EmptyState
+                      size="sm"
+                      className="[&_p]:text-white/70"
+                      icon={<Film className="w-6 h-6" />}
+                      title="No slides to preview"
+                      description="Complete the earlier steps to preview your video here."
+                    />
                   </div>
                 )}
 

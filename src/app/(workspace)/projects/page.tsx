@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { EmptyState } from "@/components/ui/empty-state";
 import {
   Dialog,
   DialogContent,
@@ -212,17 +213,23 @@ export default function ProjectsPage() {
             Loading projects...
           </div>
         ) : sortedProjects.length === 0 ? (
-          <div className="text-center py-12">
-            <Video className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-            <h2 className="text-xl font-semibold mb-2">No projects yet</h2>
-            <p className="text-muted-foreground mb-4">
-              Create your first video project to get started.
-            </p>
-            <Button onClick={handleCreateProject}>
-              <Plus className="w-4 h-4 mr-2" />
-              Create Project
-            </Button>
-          </div>
+          <EmptyState
+            icon={<Video className="w-8 h-8" />}
+            title={search ? "No projects match your search" : "No projects yet"}
+            description={
+              search
+                ? `Nothing matched “${search}”. Try a different term.`
+                : "Create your first video project to get started."
+            }
+            action={
+              !search && (
+                <Button onClick={handleCreateProject}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Project
+                </Button>
+              )
+            }
+          />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {sortedProjects.map((project) => (

@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 import { StepContainer } from "@/components/workflow/step-container";
 import { StepNavigation } from "@/components/workflow/step-navigation";
 import { SlideCanvas } from "@/components/workflow/slide-canvas";
@@ -176,7 +177,12 @@ export default function SlidesPage({ params }: PageProps) {
                 />
               ) : (
                 <div className="aspect-video rounded-lg border bg-muted flex items-center justify-center">
-                  <p className="text-muted-foreground">No slides to display</p>
+                  <EmptyState
+                    size="sm"
+                    icon={<Palette className="w-6 h-6" />}
+                    title="No slides yet"
+                    description="Generate content in the previous step and your slides will render here."
+                  />
                 </div>
               )}
 
