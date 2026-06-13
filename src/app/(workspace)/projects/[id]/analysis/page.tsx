@@ -6,10 +6,12 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { StepContainer } from "@/components/workflow/step-container";
 import { StepNavigation } from "@/components/workflow/step-navigation";
 import { PracticePanel } from "@/components/workflow/practice-panel";
+import { RadialScore } from "@/components/workflow/charts/radial-score";
+import { RadarChart } from "@/components/workflow/charts/radar-chart";
+import { WpmMeter } from "@/components/workflow/charts/wpm-meter";
 import { useProjectStore } from "@/stores/project-store";
 import { useSettingsStore } from "@/stores/settings-store";
 import { cn } from "@/lib/utils";
@@ -163,13 +165,6 @@ export default function AnalysisPage({ params }: PageProps) {
     return "text-red-500";
   };
 
-  const getScoreLabel = (score: number) => {
-    if (score >= 90) return "Excellent";
-    if (score >= 80) return "Good";
-    if (score >= 70) return "Fair";
-    return "Needs Work";
-  };
-
   const totalRecordings = currentProject?.recordings?.length || 0;
   const completedAnalyses = analyses.filter(Boolean).length;
 
@@ -278,49 +273,56 @@ export default function AnalysisPage({ params }: PageProps) {
                   <>
                     {/* Overall Score */}
                     <Card>
-                      <CardContent className="p-6 text-center">
-                        <div className={cn("text-6xl font-bold", getScoreColor(currentAnalysis.overallScore))}>
-                          {Math.round(currentAnalysis.overallScore)}
-                        </div>
-                        <p className="text-lg font-medium mt-2">
-                          {getScoreLabel(currentAnalysis.overallScore)}
-                        </p>
-                        <p className="text-sm text-muted-foreground">Overall Score</p>
+                      <CardContent className="p-6 flex justify-center">
+                        <RadialScore
+                          value={currentAnalysis.overallScore}
+                          size={180}
+                          caption="Overall Score"
+                        />
                       </CardContent>
                     </Card>
 
-                    {/* Individual Scores */}
-                    <div className="grid grid-cols-2 gap-4">
-                      {[
-                        { label: "Pronunciation", score: currentAnalysis.pronunciationScore },
-                        { label: "Fluency", score: currentAnalysis.fluencyScore },
-                        { label: "Confidence", score: currentAnalysis.confidenceScore },
-                        { label: "Naturalness", score: currentAnalysis.naturalnessScore },
-                      ].map((item) => (
-                        <Card key={item.label}>
-                          <CardContent className="p-4">
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="text-sm font-medium">{item.label}</span>
-                              <span className={cn("font-bold", getScoreColor(item.score))}>
+                    {/* Individual Scores — radar profile + numeric legend */}
+                    <Card>
+                      <CardHeader className="pb-1">
+                        <CardTitle className="text-sm">Score profile</CardTitle>
+                      </CardHeader>
+                      <CardContent className="pt-0">
+                        <div className="max-w-[260px] mx-auto">
+                          <RadarChart
+                            data={[
+                              { label: "Pronunciation", value: currentAnalysis.pronunciationScore },
+                              { label: "Fluency", value: currentAnalysis.fluencyScore },
+                              { label: "Confidence", value: currentAnalysis.confidenceScore },
+                              { label: "Naturalness", value: currentAnalysis.naturalnessScore },
+                            ]}
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-x-6 gap-y-2 mt-2">
+                          {[
+                            { label: "Pronunciation", score: currentAnalysis.pronunciationScore },
+                            { label: "Fluency", score: currentAnalysis.fluencyScore },
+                            { label: "Confidence", score: currentAnalysis.confidenceScore },
+                            { label: "Naturalness", score: currentAnalysis.naturalnessScore },
+                          ].map((item) => (
+                            <div
+                              key={item.label}
+                              className="flex items-center justify-between text-sm"
+                            >
+                              <span className="text-muted-foreground">{item.label}</span>
+                              <span className={cn("font-bold tabular-nums", getScoreColor(item.score))}>
                                 {Math.round(item.score)}
                               </span>
                             </div>
-                            <Progress value={item.score} className="h-2" />
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
 
                     {/* Speaking Rate */}
                     <Card>
                       <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium">Speaking Rate</span>
-                          <span className="font-bold">{Math.round(currentAnalysis.wordsPerMinute)} WPM</span>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Ideal range: 120-150 WPM
-                        </p>
+                        <WpmMeter wpm={currentAnalysis.wordsPerMinute} />
                       </CardContent>
                     </Card>
                   </>
