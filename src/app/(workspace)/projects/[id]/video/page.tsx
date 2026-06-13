@@ -23,6 +23,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { StepContainer } from "@/components/workflow/step-container";
+import { ExportResult } from "@/components/workflow/export-result";
 import { ReadinessPanel } from "@/components/workflow/readiness-panel";
 import { SeoCopilotPanel } from "@/components/workflow/seo-copilot-panel";
 import { ThumbnailPicker } from "@/components/workflow/thumbnail-picker";
@@ -223,6 +224,19 @@ export default function VideoPage({ params }: PageProps) {
         }
       >
         <div className="flex-1 p-6 space-y-6">
+          {exportStatus === "complete" && (
+            <ExportResult
+              projectName={currentProject?.name || "video"}
+              posterMarkdown={slides[0]?.markdown}
+              posterTheme={slides[0]?.theme}
+              slideCount={slides.length}
+              totalDuration={totalDuration}
+              resolution={resolution}
+              artifacts={exportArtifacts}
+              onDownload={handleDownload}
+              onUploadYouTube={() => setShowYouTubeDialog(true)}
+            />
+          )}
           <ReadinessPanel projectId={id} report={readiness} />
           <SeoCopilotPanel projectId={id} />
           <ThumbnailPicker projectId={id} />
@@ -378,70 +392,21 @@ export default function VideoPage({ params }: PageProps) {
                   {exportStatus === "complete" && (
                     <div
                       data-testid="export-complete"
-                      className="space-y-3"
+                      className="space-y-2 text-center"
                     >
-                      <div className="text-emerald-600 font-medium text-center">
+                      <div className="flex items-center justify-center gap-2 text-emerald-600 font-medium">
+                        <Film className="h-4 w-4" />
                         Export complete
                       </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <Button
-                          variant="outline"
-                          onClick={() =>
-                            handleDownload(
-                              exportArtifacts.mp4,
-                              `${currentProject?.name || "video"}.mp4`
-                            )
-                          }
-                          data-testid="download-mp4"
-                        >
-                          <Download className="h-4 w-4 mr-2" /> MP4
-                        </Button>
-                        <Button
-                          variant="outline"
-                          onClick={() =>
-                            handleDownload(
-                              exportArtifacts.captions,
-                              `${currentProject?.name || "video"}.vtt`
-                            )
-                          }
-                          disabled={!exportArtifacts.captions}
-                          data-testid="download-captions"
-                        >
-                          <Download className="h-4 w-4 mr-2" /> Captions
-                        </Button>
-                        <Button
-                          variant="outline"
-                          onClick={() =>
-                            handleDownload(
-                              exportArtifacts.transcript,
-                              `${currentProject?.name || "video"}.transcript.txt`
-                            )
-                          }
-                          disabled={!exportArtifacts.transcript}
-                          data-testid="download-transcript"
-                        >
-                          <Download className="h-4 w-4 mr-2" /> Transcript
-                        </Button>
-                        <Button
-                          variant="outline"
-                          onClick={() =>
-                            handleDownload(
-                              exportArtifacts.sources,
-                              `${currentProject?.name || "video"}.sources.md`
-                            )
-                          }
-                          disabled={!exportArtifacts.sources}
-                          data-testid="download-sources"
-                        >
-                          <Download className="h-4 w-4 mr-2" /> Sources
-                        </Button>
-                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Your finished video and downloads are in the summary above.
+                      </p>
                       <Button
+                        variant="outline"
                         className="w-full"
-                        onClick={() => setShowYouTubeDialog(true)}
+                        onClick={handleExport}
                       >
-                        <MonitorPlay className="h-4 w-4 mr-2" />
-                        Upload to YouTube
+                        Re-export
                       </Button>
                     </div>
                   )}
