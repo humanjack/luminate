@@ -15,6 +15,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import type { DashboardSnapshot } from "@/lib/analytics/aggregate";
 import { donutSegments } from "@/lib/analytics/donut";
 
@@ -66,6 +67,7 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <ThemeToggle />
             <Link href="/projects">
               <Button variant="outline" size="sm">
                 <FolderOpen className="w-4 h-4 mr-2" />
