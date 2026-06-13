@@ -46,7 +46,7 @@ export default function HomePage() {
         {/* Quick Actions */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 max-w-5xl mx-auto mb-16">
           <Card
-            className="cursor-pointer hover:border-primary transition-colors"
+            className="cursor-pointer hover:border-primary transition-colors lift"
             onClick={handleCreateProject}
           >
             <CardHeader className="text-center">
@@ -57,7 +57,7 @@ export default function HomePage() {
           </Card>
 
           <Link href="/projects">
-            <Card className="cursor-pointer hover:border-primary transition-colors h-full">
+            <Card className="cursor-pointer hover:border-primary transition-colors lift h-full">
               <CardHeader className="text-center">
                 <FolderOpen className="h-12 w-12 mx-auto text-primary mb-2" />
                 <CardTitle>All Projects</CardTitle>
@@ -67,7 +67,7 @@ export default function HomePage() {
           </Link>
 
           <Link href="/dashboard">
-            <Card className="cursor-pointer hover:border-primary transition-colors h-full">
+            <Card className="cursor-pointer hover:border-primary transition-colors lift h-full">
               <CardHeader className="text-center">
                 <Gauge className="h-12 w-12 mx-auto text-primary mb-2" />
                 <CardTitle>Dashboard</CardTitle>
@@ -77,7 +77,7 @@ export default function HomePage() {
           </Link>
 
           <Link href="/settings">
-            <Card className="cursor-pointer hover:border-primary transition-colors h-full">
+            <Card className="cursor-pointer hover:border-primary transition-colors lift h-full">
               <CardHeader className="text-center">
                 <Settings className="h-12 w-12 mx-auto text-primary mb-2" />
                 <CardTitle>Settings</CardTitle>
@@ -94,7 +94,7 @@ export default function HomePage() {
             <div className="grid gap-4">
               {recentProjects.map((project) => (
                 <Link key={project.id} href={`/projects/${project.id}/research`}>
-                  <Card className="cursor-pointer hover:border-primary transition-colors">
+                  <Card className="cursor-pointer hover:border-primary transition-colors lift">
                     <CardContent className="flex items-center justify-between py-4">
                       <div className="flex items-center gap-4 min-w-0">
                         <div className="w-24 shrink-0">

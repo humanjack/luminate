@@ -34,7 +34,7 @@ export function StepContainer({
         </div>
         {actions && <div className="flex items-center gap-2">{actions}</div>}
       </div>
-      <div className="flex-1 overflow-auto">{children}</div>
+      <div className="flex-1 overflow-auto fade-in">{children}</div>
     </div>
   );
 }

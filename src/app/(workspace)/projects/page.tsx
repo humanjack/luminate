@@ -236,7 +236,7 @@ export default function ProjectsPage() {
             {sortedProjects.map((project) => (
               <Card
                 key={project.id}
-                className={`group cursor-pointer transition-colors ${
+                className={`group cursor-pointer lift ${
                   selectedIds.has(project.id)
                     ? "border-primary ring-1 ring-primary"
                     : "hover:border-primary"
