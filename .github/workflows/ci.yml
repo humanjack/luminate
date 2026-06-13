@@ -1,0 +1,76 @@
+name: CI
+
+# Gates pull requests and pushes to main on the checks that actually pass today:
+# typecheck (tsc), tests (vitest), and the production build. Lint runs too but is
+# intentionally non-blocking because the repo carries a documented pre-existing
+# eslint baseline (~52 errors) that is tracked separately (see issue #61 / #119).
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel superseded runs on the same ref so a rapid push sequence doesn't pile up.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Never assume a live FastAPI backend during CI build/test. Empty string keeps
+  # the documented "backend sync disabled" semantics.
+  BACKEND_URL: ""
+  # Builds/tests must run without prompting for telemetry.
+  NEXT_TELEMETRY_DISABLED: "1"
+
+jobs:
+  typecheck:
+    name: Typecheck (tsc)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npx tsc --noEmit
+
+  test:
+    name: Test (vitest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      # Default vitest config only — deliberately NOT the API-calling eval harness
+      # in vitest.eval.config.ts, which needs a real Anthropic key.
+      - run: npm run test:run
+
+  build:
+    name: Build (next build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+
+  lint:
+    name: Lint (non-blocking)
+    runs-on: ubuntu-latest
+    # Surfaces the eslint baseline as annotations without failing the suite.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
