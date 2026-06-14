@@ -1,5 +1,6 @@
 import { promises as fs } from "fs";
 import { transcodeToWav16k, countFillerWords } from "./audio";
+import { fetchResilient } from "@/lib/net";
 
 export interface AzureAnalysisInput {
   apiKey: string;
@@ -70,16 +71,20 @@ export async function analyzeWithAzure(input: AzureAnalysisInput) {
 
     const url = `https://${region}.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=${language}&format=detailed`;
 
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Ocp-Apim-Subscription-Key": apiKey,
-        "Content-Type": "audio/wav; codecs=audio/pcm; samplerate=16000",
-        "Pronunciation-Assessment": paHeader,
-        "Accept": "application/json",
+    const response = await fetchResilient(
+      url,
+      {
+        method: "POST",
+        headers: {
+          "Ocp-Apim-Subscription-Key": apiKey,
+          "Content-Type": "audio/wav; codecs=audio/pcm; samplerate=16000",
+          "Pronunciation-Assessment": paHeader,
+          "Accept": "application/json",
+        },
+        body: new Uint8Array(wavBuffer),
       },
-      body: new Uint8Array(wavBuffer),
-    });
+      { timeoutMs: 60_000, retries: 2 }
+    );
 
     if (!response.ok) {
       const text = await response.text().catch(() => "");
@@ -159,13 +164,17 @@ export async function analyzeWithAzure(input: AzureAnalysisInput) {
 export async function verifyAzureCredentials(apiKey: string, region: string): Promise<{ valid: boolean; message?: string; error?: string }> {
   const url = `https://${region}.api.cognitive.microsoft.com/sts/v1.0/issueToken`;
   try {
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Ocp-Apim-Subscription-Key": apiKey,
-        "Content-Length": "0",
+    const response = await fetchResilient(
+      url,
+      {
+        method: "POST",
+        headers: {
+          "Ocp-Apim-Subscription-Key": apiKey,
+          "Content-Length": "0",
+        },
       },
-    });
+      { timeoutMs: 10_000, retries: 1 }
+    );
     if (response.ok) {
       return { valid: true, message: `Azure Speech credentials valid for region ${region}` };
     }
