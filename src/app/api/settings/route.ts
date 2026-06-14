@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, settings } from "@/lib/db";
 import { eq } from "drizzle-orm";
+import { isSecretKey, SECRET_SENTINEL } from "@/lib/api/secrets";
 
 // Python backend is optional (see CLAUDE.md — Next.js is the canonical MVP runtime).
 // Defaults to localhost:8000 for users running both frontend + backend; sync is
@@ -18,13 +19,24 @@ export async function GET() {
     // Get local settings
     const allSettings = await db.select().from(settings);
 
-    // Convert array to object
-    const settingsObject: Record<string, any> = {};
+    // Convert array to object, redacting secrets so raw provider keys never
+    // reach the browser. A configured secret is replaced with a sentinel and a
+    // companion `<key>Configured: true` boolean the UI can show as "saved".
+    const settingsObject: Record<string, unknown> = {};
     for (const setting of allSettings) {
+      let value: unknown;
       try {
-        settingsObject[setting.key] = JSON.parse(setting.value || "null");
+        value = JSON.parse(setting.value || "null");
       } catch {
-        settingsObject[setting.key] = setting.value;
+        value = setting.value;
+      }
+
+      if (isSecretKey(setting.key)) {
+        const configured = typeof value === "string" && value.length > 0;
+        settingsObject[setting.key] = configured ? SECRET_SENTINEL : "";
+        settingsObject[`${setting.key}Configured`] = configured;
+      } else {
+        settingsObject[setting.key] = value;
       }
     }
 
@@ -43,6 +55,12 @@ export async function POST(request: NextRequest) {
 
     // Save to local SQLite
     for (const [key, value] of Object.entries(body)) {
+      // A redacted secret that comes back unchanged means "leave it alone" —
+      // never overwrite a stored key with the mask. Also ignore the companion
+      // `<key>Configured` flags the GET response adds.
+      if (isSecretKey(key) && value === SECRET_SENTINEL) continue;
+      if (key.endsWith("Configured")) continue;
+
       const stringValue = typeof value === "string" ? value : JSON.stringify(value);
 
       // Check if setting exists
@@ -73,9 +91,10 @@ export async function POST(request: NextRequest) {
       googleModel: body.googleModel,
     };
 
-    // Filter out undefined values
+    // Filter out undefined values and unchanged-secret sentinels (so a masked
+    // key is never synced over the backend's real one).
     const filteredSettings = Object.fromEntries(
-      Object.entries(llmSettings).filter(([, v]) => v !== undefined)
+      Object.entries(llmSettings).filter(([, v]) => v !== undefined && v !== SECRET_SENTINEL)
     );
 
     if (BACKEND_URL && Object.keys(filteredSettings).length > 0) {

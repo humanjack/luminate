@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
 import type { SearchProviderId } from "@/lib/research/search/types";
+import { SECRET_KEYS, SECRET_SENTINEL } from "@/lib/api/secrets";
 
 export type LLMProvider = "anthropic" | "openai" | "google" | "claude-cli";
 export type SpeechProvider = "speechsuper" | "elsa" | "azure" | "openai";
@@ -51,6 +52,11 @@ interface SettingsState {
   // Video Export Preferences
   defaultResolution: "1280x720" | "1920x1080" | "2560x1440";
   defaultTransition: "none" | "fade" | "slide";
+
+  // Which secrets the server reports as configured (derived from GET; not
+  // persisted). Lets the UI show "saved" without the raw key ever being sent
+  // to the browser.
+  secretConfigured: Record<string, boolean>;
 
   // Actions
   setLLMProvider: (provider: LLMProvider) => void;
@@ -123,6 +129,8 @@ export const useSettingsStore = create<SettingsState>()(
       defaultResolution: "1920x1080",
       defaultTransition: "fade",
 
+      secretConfigured: {},
+
       // Actions
       setLLMProvider: (provider) => set({ llmProvider: provider }),
 
@@ -183,7 +191,21 @@ export const useSettingsStore = create<SettingsState>()(
             const clean = Object.fromEntries(
               Object.entries(settings).filter(([, value]) => value !== null && value !== undefined)
             );
-            set(clean);
+
+            // Secrets are redacted by the server: the GET response carries a
+            // sentinel plus a `<key>Configured` flag, never the raw key. Capture
+            // the configured flags, and NEVER let the sentinel overwrite a real
+            // key already in state (rehydrated from localStorage) — that key is
+            // still needed client-side to call the LLM endpoints.
+            const secretConfigured: Record<string, boolean> = { ...get().secretConfigured };
+            for (const key of SECRET_KEYS) {
+              const flag = clean[`${key}Configured`];
+              if (typeof flag === "boolean") secretConfigured[key] = flag;
+              delete clean[`${key}Configured`];
+              if (clean[key] === SECRET_SENTINEL) delete clean[key];
+            }
+
+            set({ ...clean, secretConfigured });
           }
         } catch (error) {
           console.error("Failed to load settings:", error);
@@ -193,29 +215,33 @@ export const useSettingsStore = create<SettingsState>()(
       saveSettings: async () => {
         try {
           const state = get();
+          // For a secret the user left blank but the server already has, send
+          // the sentinel so the stored key is left untouched (never wiped).
+          const secretOut = (key: string, value: string) =>
+            value === "" && state.secretConfigured[key] ? SECRET_SENTINEL : value;
           await fetch("/api/settings", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               llmProvider: state.llmProvider,
-              anthropicApiKey: state.anthropicApiKey,
+              anthropicApiKey: secretOut("anthropicApiKey", state.anthropicApiKey),
               claudeModel: state.claudeModel,
-              openaiApiKey: state.openaiApiKey,
+              openaiApiKey: secretOut("openaiApiKey", state.openaiApiKey),
               openaiModel: state.openaiModel,
-              googleApiKey: state.googleApiKey,
+              googleApiKey: secretOut("googleApiKey", state.googleApiKey),
               googleModel: state.googleModel,
               speechProvider: state.speechProvider,
-              speechSuperApiKey: state.speechSuperApiKey,
-              speechSuperAppId: state.speechSuperAppId,
-              elsaApiKey: state.elsaApiKey,
-              azureSpeechKey: state.azureSpeechKey,
+              speechSuperApiKey: secretOut("speechSuperApiKey", state.speechSuperApiKey),
+              speechSuperAppId: secretOut("speechSuperAppId", state.speechSuperAppId),
+              elsaApiKey: secretOut("elsaApiKey", state.elsaApiKey),
+              azureSpeechKey: secretOut("azureSpeechKey", state.azureSpeechKey),
               azureSpeechRegion: state.azureSpeechRegion,
               enableWebResearch: state.enableWebResearch,
               searchProvider: state.searchProvider,
               maxSources: state.maxSources,
               maxSearchIterations: state.maxSearchIterations,
-              tavilyApiKey: state.tavilyApiKey,
-              braveApiKey: state.braveApiKey,
+              tavilyApiKey: secretOut("tavilyApiKey", state.tavilyApiKey),
+              braveApiKey: secretOut("braveApiKey", state.braveApiKey),
               theme: state.theme,
               autoSave: state.autoSave,
               autoSaveInterval: state.autoSaveInterval,
