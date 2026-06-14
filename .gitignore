@@ -43,6 +43,10 @@ next-env.d.ts
 *.db
 *.sqlite
 *.sqlite3
+# SQLite WAL-mode sidecar files (the *.db glob does NOT match these)
+*.db-shm
+*.db-wal
+*.db-journal
 
 # Playwright MCP scratch directory used for local screenshots
 /.playwright-mcp/

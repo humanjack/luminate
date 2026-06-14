@@ -5,8 +5,11 @@ import { dbFilePath } from "@/lib/paths";
 
 const sqlite = new Database(dbFilePath());
 
-// Enable foreign keys
+// Enable foreign keys; wait up to 5s on a briefly-locked DB instead of erroring
+// immediately; WAL improves read/write concurrency for the single-file DB.
 sqlite.pragma("foreign_keys = ON");
+sqlite.pragma("busy_timeout = 5000");
+sqlite.pragma("journal_mode = WAL");
 
 export const db = drizzle(sqlite, { schema });
 
