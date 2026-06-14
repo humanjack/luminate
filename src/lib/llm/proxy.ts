@@ -1,10 +1,11 @@
+import { fail } from "@/lib/api/respond";
+
 const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8000";
 
 export function jsonError(message: string, status: number): Response {
-  return new Response(JSON.stringify({ error: message }), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
+  // Share the standard { error, code, requestId } envelope so the streaming
+  // proxy's error responses match the rest of the API surface.
+  return fail("backend_proxy_error", message, status);
 }
 
 // Forwards an LLM generation request to the FastAPI backend and streams the

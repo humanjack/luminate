@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import {
   db,
   projects,
@@ -15,6 +15,7 @@ import {
 } from "@/lib/db";
 import { eq } from "drizzle-orm";
 import { projectUpdateFields, ApiValidationError } from "@/lib/api/sanitize";
+import { ok, fail, serverError } from "@/lib/api/respond";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -28,7 +29,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const [project] = await db.select().from(projects).where(eq(projects.id, id));
 
     if (!project) {
-      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+      return fail("not_found", "Project not found", 404);
     }
 
     // Fetch related data
@@ -47,7 +48,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       .where(eq(outlineItems.projectId, id));
     projectOutline.sort((a, b) => a.index - b.index);
 
-    return NextResponse.json({
+    return ok({
       ...project,
       researchData: research || null,
       contentData: content || null,
@@ -61,8 +62,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       outlineItems: projectOutline,
     });
   } catch (error) {
-    console.error("Failed to fetch project:", error);
-    return NextResponse.json({ error: "Failed to fetch project" }, { status: 500 });
+    return serverError(error, { message: "Failed to fetch project" });
   }
 }
 
@@ -86,16 +86,15 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       .returning();
 
     if (!updated) {
-      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+      return fail("not_found", "Project not found", 404);
     }
 
-    return NextResponse.json(updated);
+    return ok(updated);
   } catch (error) {
     if (error instanceof ApiValidationError) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return fail("validation_error", error.message, 400);
     }
-    console.error("Failed to update project:", error);
-    return NextResponse.json({ error: "Failed to update project" }, { status: 500 });
+    return serverError(error, { message: "Failed to update project" });
   }
 }
 
@@ -110,12 +109,11 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       .returning();
 
     if (!deleted) {
-      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+      return fail("not_found", "Project not found", 404);
     }
 
-    return NextResponse.json({ success: true });
+    return ok({ success: true });
   } catch (error) {
-    console.error("Failed to delete project:", error);
-    return NextResponse.json({ error: "Failed to delete project" }, { status: 500 });
+    return serverError(error, { message: "Failed to delete project" });
   }
 }
