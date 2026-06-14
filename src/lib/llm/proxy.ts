@@ -1,6 +1,7 @@
 import { fail } from "@/lib/api/respond";
+import { env } from "@/lib/env";
 
-const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8000";
+const BACKEND_URL = env.BACKEND_URL;
 
 export function jsonError(message: string, status: number): Response {
   // Share the standard { error, code, requestId } envelope so the streaming

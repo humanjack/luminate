@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { db, settings } from "@/lib/db";
 import { eq } from "drizzle-orm";
 import { isSecretKey, SECRET_SENTINEL } from "@/lib/api/secrets";
+import { env } from "@/lib/env";
 
 // Python backend is optional (see CLAUDE.md — Next.js is the canonical MVP runtime).
 // Defaults to localhost:8000 for users running both frontend + backend; sync is
 // silently skipped when the backend isn't reachable. Set BACKEND_URL="" to disable entirely.
-const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:8000";
+const BACKEND_URL = env.BACKEND_URL;
 
 function isConnRefused(err: unknown): boolean {
   const cause = (err as { cause?: { code?: string }; code?: string })?.cause;
