@@ -65,3 +65,6 @@ __pycache__/
 .pytest_cache/
 .coverage
 .cache/
+
+# bundle analyzer output
+.next/analyze/
