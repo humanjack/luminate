@@ -95,6 +95,13 @@ vi.mock("drizzle-orm", () => ({
 let uuidCounter = 0;
 vi.mock("uuid", () => ({ v4: () => `id-${++uuidCounter}` }));
 
+// Mock DNS so the SSRF guard in safeFetch resolves example.com to a fixed
+// public IP — keeps this an offline, deterministic test (no real DNS).
+vi.mock("node:dns/promises", () => {
+  const lookup = async () => [{ address: "93.184.216.34", family: 4 }];
+  return { lookup, default: { lookup } };
+});
+
 // Stub global fetch for URL ingestion
 const originalFetch = global.fetch;
 

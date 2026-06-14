@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db, sources } from "@/lib/db";
 import { eq } from "drizzle-orm";
 import { v4 as uuid } from "uuid";
+import { safeFetch } from "@/lib/net/safe-fetch";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -53,12 +54,18 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     if (type === "url") {
       try {
-        const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), 10_000);
-        const res = await fetch(body.url, { signal: controller.signal });
-        clearTimeout(timer);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const html = await res.text();
+        // SSRF-hardened: validates the URL (and every redirect hop) does not
+        // resolve to a private/loopback/metadata address, with a timeout and a
+        // streamed byte cap. A blocked or failed fetch keeps the existing
+        // behavior — the source is saved with status `failed`, never populating
+        // fetchedText from an internal target.
+        const { status: httpStatus, text: html } = await safeFetch(body.url, {
+          timeoutMs: 10_000,
+          maxBytes: 2_000_000,
+        });
+        if (httpStatus < 200 || httpStatus >= 300) {
+          throw new Error(`HTTP ${httpStatus}`);
+        }
         fetchedText = stripHtml(html).slice(0, 200_000);
         title = title || extractTitle(html) || body.url;
         status = "fetched";
