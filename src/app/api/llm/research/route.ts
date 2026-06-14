@@ -1,9 +1,11 @@
 import { NextRequest } from "next/server";
 
-import { proxyLLMStream, jsonError } from "@/lib/llm/proxy";
+import { proxyLLMStream } from "@/lib/llm/proxy";
 import { loadResearchGenerationConfig } from "@/lib/research/config";
-import { useInProcessResearch, type ResearchDepth } from "@/lib/research/generate";
+import { useInProcessResearch } from "@/lib/research/generate";
 import { generateAgenticResearch } from "@/lib/research/loop";
+import { parseJson } from "@/lib/api/validate";
+import { researchGenerateSchema } from "@/lib/api/schemas";
 
 export const runtime = "nodejs";
 
@@ -21,13 +23,9 @@ function sse(data: unknown): Uint8Array {
  * FastAPI backend (legacy single-prompt path).
  */
 export async function POST(request: NextRequest) {
-  const body = await request.json();
-  const { topic } = body;
-  const depth: ResearchDepth = body.depth || "detailed";
-
-  if (!topic) {
-    return jsonError("Topic is required", 400);
-  }
+  const parsed = await parseJson(request, researchGenerateSchema);
+  if (!parsed.ok) return parsed.response;
+  const { topic, depth } = parsed.data;
 
   const config = await loadResearchGenerationConfig();
 

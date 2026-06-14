@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { v4 as uuid } from "uuid";
+import { readJson } from "@/lib/api/validate";
 
 import {
   db,
@@ -85,7 +86,9 @@ export async function POST(_request: NextRequest, { params }: RouteParams) {
 // PATCH /api/projects/:id/thumbnails — set the currently selected variant.
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   const { id } = await params;
-  const body = (await request.json()) as { preset?: ThumbnailPreset };
+  const parsed = await readJson(request);
+  if (!parsed.ok) return parsed.response;
+  const body = (parsed.data ?? {}) as { preset?: ThumbnailPreset };
   if (!body.preset) {
     return NextResponse.json({ error: "preset required" }, { status: 400 });
   }
