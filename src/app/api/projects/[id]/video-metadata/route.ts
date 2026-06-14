@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { db, videoMetadata } from "@/lib/db";
+import { readJson } from "@/lib/api/validate";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -21,7 +22,12 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
 // PATCH /api/projects/[id]/video-metadata — persist user edits (selected title, manual description tweaks).
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   const { id } = await params;
-  const body = await request.json();
+  const parsed = await readJson(request);
+  if (!parsed.ok) return parsed.response;
+  const body =
+    parsed.data && typeof parsed.data === "object"
+      ? (parsed.data as Record<string, unknown>)
+      : {};
   const [existing] = await db
     .select()
     .from(videoMetadata)
