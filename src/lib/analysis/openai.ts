@@ -1,5 +1,6 @@
 import { promises as fs } from "fs";
 import { countFillerWords, resolveAudioFile } from "./audio";
+import { fetchResilient } from "@/lib/net";
 
 export interface OpenAIAnalysisInput {
   apiKey: string;
@@ -105,11 +106,15 @@ export async function transcribeWithOpenAI(
   form.append("response_format", "verbose_json");
   form.append("timestamp_granularities[]", "word");
 
-  const response = await fetch("https://api.openai.com/v1/audio/transcriptions", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}` },
-    body: form,
-  });
+  const response = await fetchResilient(
+    "https://api.openai.com/v1/audio/transcriptions",
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}` },
+      body: form,
+    },
+    { timeoutMs: 60_000, retries: 2 }
+  );
 
   if (!response.ok) {
     const text = await response.text().catch(() => "");
