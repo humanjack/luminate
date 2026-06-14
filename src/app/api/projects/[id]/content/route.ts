@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db, contentData, projects } from "@/lib/db";
 import { eq } from "drizzle-orm";
 import { v4 as uuid } from "uuid";
+import { contentUpdateFields, ApiValidationError } from "@/lib/api/sanitize";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -21,10 +22,11 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const now = new Date();
 
     if (existing) {
+      // Allow-list writable fields (no raw body spread).
       const [updated] = await db
         .update(contentData)
         .set({
-          ...body,
+          ...contentUpdateFields(body),
           updatedAt: now,
         })
         .where(eq(contentData.id, existing.id))
@@ -60,6 +62,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json(created, { status: 201 });
     }
   } catch (error) {
+    if (error instanceof ApiValidationError) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
     console.error("Failed to save content data:", error);
     return NextResponse.json(
       { error: "Failed to save content data" },

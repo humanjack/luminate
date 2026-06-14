@@ -14,6 +14,7 @@ import {
   outlineItems,
 } from "@/lib/db";
 import { eq } from "drizzle-orm";
+import { projectUpdateFields, ApiValidationError } from "@/lib/api/sanitize";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -71,10 +72,14 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     const { id } = await params;
     const body = await request.json();
 
+    // Allow-list the writable columns — never trust a raw body spread, which
+    // would let a client overwrite id/createdAt or set an out-of-enum status.
+    const fields = projectUpdateFields(body);
+
     const [updated] = await db
       .update(projects)
       .set({
-        ...body,
+        ...fields,
         updatedAt: new Date(),
       })
       .where(eq(projects.id, id))
@@ -86,6 +91,9 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json(updated);
   } catch (error) {
+    if (error instanceof ApiValidationError) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
     console.error("Failed to update project:", error);
     return NextResponse.json({ error: "Failed to update project" }, { status: 500 });
   }

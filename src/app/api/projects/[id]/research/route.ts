@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db, researchData, projects } from "@/lib/db";
 import { eq } from "drizzle-orm";
 import { v4 as uuid } from "uuid";
+import { researchUpdateFields, ApiValidationError } from "@/lib/api/sanitize";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -22,11 +23,11 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const now = new Date();
 
     if (existing) {
-      // Update existing
+      // Update existing — allow-list writable fields (no raw body spread).
       const [updated] = await db
         .update(researchData)
         .set({
-          ...body,
+          ...researchUpdateFields(body),
           updatedAt: now,
         })
         .where(eq(researchData.id, existing.id))
@@ -64,6 +65,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json(created, { status: 201 });
     }
   } catch (error) {
+    if (error instanceof ApiValidationError) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
     console.error("Failed to save research data:", error);
     return NextResponse.json(
       { error: "Failed to save research data" },
