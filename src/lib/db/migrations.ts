@@ -272,6 +272,16 @@ export function createTables(sqlite: Database.Database) {
     CREATE INDEX IF NOT EXISTS idx_video_metadata_project ON video_metadata(project_id);
     CREATE INDEX IF NOT EXISTS idx_thumbnails_project ON thumbnails(project_id);
     CREATE INDEX IF NOT EXISTS idx_clip_suggestions_project ON clip_suggestions(project_id);
+
+    -- Hot path: GET /api/projects enriches every card with the first slide
+    -- (slides.index = 0) and the selected thumbnail across ALL projects. These
+    -- turn the prior full-table SCANs into index lookups.
+    -- Partial index matches the WHERE "index" = 0 predicate (tiny: one row/project).
+    CREATE INDEX IF NOT EXISTS idx_slides_first ON slides(project_id) WHERE "index" = 0;
+    -- Composite for the per-project ordered fetch (WHERE project_id = ? ORDER BY index).
+    CREATE INDEX IF NOT EXISTS idx_slides_project_index ON slides(project_id, "index");
+    -- Partial index over only selected thumbnails.
+    CREATE INDEX IF NOT EXISTS idx_thumbnails_selected ON thumbnails(project_id) WHERE selected = 1;
   `);
 
   // Idempotent column adds for existing databases
