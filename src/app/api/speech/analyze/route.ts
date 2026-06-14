@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, settings } from "@/lib/db";
+import { db, settings, recordings } from "@/lib/db";
+import { eq } from "drizzle-orm";
 import { analyzeWithAzure } from "@/lib/analysis/azure";
 import { analyzeWithOpenAI } from "@/lib/analysis/openai";
 
@@ -44,14 +45,28 @@ function mockResult(recordingId: string) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { recordingId, audioPath, script } = body as {
+    const { recordingId, script } = body as {
       recordingId: string;
-      audioPath: string;
       script: string;
     };
 
-    if (!recordingId || !audioPath) {
-      return NextResponse.json({ error: "recordingId and audioPath required" }, { status: 400 });
+    if (!recordingId) {
+      return NextResponse.json({ error: "recordingId required" }, { status: 400 });
+    }
+
+    // Resolve the audio path from the stored recording row — never trust a
+    // client-supplied audioPath, which could point outside the managed media
+    // tree. The downstream transcode also re-validates via resolveAudioFile.
+    const [recording] = await db
+      .select()
+      .from(recordings)
+      .where(eq(recordings.id, recordingId));
+    if (!recording) {
+      return NextResponse.json({ error: "recording not found" }, { status: 404 });
+    }
+    const audioPath = recording.audioPath;
+    if (!audioPath) {
+      return NextResponse.json({ error: "recording has no audio file" }, { status: 400 });
     }
 
     const settingsData = await getSettings();

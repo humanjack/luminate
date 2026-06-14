@@ -9,10 +9,15 @@ interface RouteParams {
   params: Promise<{ id: string }>;
 }
 
+const MAX_AUDIO_BYTES = 50 * 1024 * 1024; // 50 MB
+
 // POST /api/projects/[id]/recordings - Save (or replace) a per-slide recording
 //
-// Requires either `audioData` (base64) or an `audioPath` that already exists on
-// disk. Recordings with neither are rejected so empty stubs can't pile up.
+// Requires `audioData` (base64). The server mints the on-disk path under
+// public/recordings/<projectId>/ — a client-supplied `audioPath` is NOT
+// accepted, since persisting an arbitrary path would later be read by the
+// speech-analysis pipeline (arbitrary-file-read). Recordings without audio are
+// rejected so empty stubs can't pile up.
 //
 // When `slideIndex` is provided and a recording already exists for that slide
 // in this project, the existing row + its audio file are removed first so
@@ -29,7 +34,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    if (!body.audioData && !body.audioPath) {
+    if (!body.audioData) {
       return NextResponse.json(
         { error: "Recording is missing audio data; cannot save empty stub" },
         { status: 400 }
@@ -39,24 +44,27 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const now = new Date();
     const recordingId = uuid();
 
-    let audioPath: string = body.audioPath ?? "";
-    if (body.audioData && !body.audioPath) {
-      const recordingsDir = path.join(process.cwd(), "public", "recordings", projectId);
-      await mkdir(recordingsDir, { recursive: true });
-
-      const fileName = `${recordingId}.webm`;
-      audioPath = `/recordings/${projectId}/${fileName}`;
-      const filePath = path.join(recordingsDir, fileName);
-
-      const audioBuffer = Buffer.from(body.audioData, "base64");
-      if (audioBuffer.byteLength === 0) {
-        return NextResponse.json(
-          { error: "Recording audio is empty" },
-          { status: 400 }
-        );
-      }
-      await writeFile(filePath, audioBuffer);
+    const audioBuffer = Buffer.from(body.audioData, "base64");
+    if (audioBuffer.byteLength === 0) {
+      return NextResponse.json(
+        { error: "Recording audio is empty" },
+        { status: 400 }
+      );
     }
+    if (audioBuffer.byteLength > MAX_AUDIO_BYTES) {
+      return NextResponse.json(
+        { error: "Recording audio exceeds the 50MB limit" },
+        { status: 413 }
+      );
+    }
+
+    // Always a server-minted path under the managed recordings tree.
+    const recordingsDir = path.join(process.cwd(), "public", "recordings", projectId);
+    await mkdir(recordingsDir, { recursive: true });
+    const fileName = `${recordingId}.webm`;
+    const audioPath = `/recordings/${projectId}/${fileName}`;
+    const filePath = path.join(recordingsDir, fileName);
+    await writeFile(filePath, audioBuffer);
 
     // Replace any prior recording for the same slide so re-records overwrite
     if (typeof body.slideIndex === "number") {
