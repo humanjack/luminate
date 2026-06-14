@@ -11,6 +11,7 @@
  * the pure gate/resolver helpers there stay SDK-free and cheap to import.
  */
 import Anthropic from "@anthropic-ai/sdk";
+import { createAnthropicClient } from "@/lib/llm/anthropicClient";
 
 import {
   GROUNDED_RESEARCH_SYSTEM_PROMPT,
@@ -88,7 +89,7 @@ export async function* generateGroundedResearch(
   }
 
   const provider = resolveSearchProvider(config);
-  const client = new Anthropic({ apiKey: config.anthropicApiKey });
+  const client = createAnthropicClient(config.anthropicApiKey);
   const model = config.model || "claude-sonnet-4-6";
   const tools = provider.getToolDefinitions() as Anthropic.Messages.ToolUnion[];
 

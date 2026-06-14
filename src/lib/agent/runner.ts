@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { eq } from "drizzle-orm";
 import { v4 as uuid } from "uuid";
+import { createAnthropicClient } from "@/lib/llm/anthropicClient";
 
 import {
   db,
@@ -40,14 +41,20 @@ async function callAnthropic(
   systemPrompt: string,
   userPrompt: string,
   maxTokens: number,
-  onChunk?: (text: string) => void
+  onChunk?: (text: string) => void,
+  signal?: AbortSignal
 ): Promise<CallResult> {
-  const stream = await client.messages.stream({
-    model,
-    max_tokens: maxTokens,
-    system: systemPrompt,
-    messages: [{ role: "user", content: userPrompt }],
-  });
+  const stream = await client.messages.stream(
+    {
+      model,
+      max_tokens: maxTokens,
+      system: systemPrompt,
+      messages: [{ role: "user", content: userPrompt }],
+    },
+    // Propagate client-disconnect into the in-flight stream so an abort cancels
+    // mid-generation rather than only between slides.
+    { signal }
+  );
 
   let text = "";
   let inputTokens = 0;
@@ -99,7 +106,8 @@ async function runResearchStep(
     userPrompt,
     4096,
     (chunk) =>
-      deps.emit({ type: "step_chunk", runId: deps.runId, step: "research", content: chunk })
+      deps.emit({ type: "step_chunk", runId: deps.runId, step: "research", content: chunk }),
+    deps.signal
   );
 
   const now = new Date();
@@ -154,7 +162,8 @@ async function runContentStep(
     userPrompt,
     4096,
     (chunk) =>
-      deps.emit({ type: "step_chunk", runId: deps.runId, step: "content", content: chunk })
+      deps.emit({ type: "step_chunk", runId: deps.runId, step: "content", content: chunk }),
+    deps.signal
   );
 
   const now = new Date();
@@ -269,7 +278,8 @@ async function runScriptsStep(deps: RunDeps): Promise<CallResult> {
       userPrompt,
       1024,
       (chunk) =>
-        deps.emit({ type: "step_chunk", runId: deps.runId, step: "scripts", content: chunk })
+        deps.emit({ type: "step_chunk", runId: deps.runId, step: "scripts", content: chunk }),
+      deps.signal
     );
 
     totalIn += result.inputTokens;
@@ -330,7 +340,7 @@ export async function* runAgent(
     if (r) r();
   };
 
-  const client = new Anthropic({ apiKey: opts.apiKey });
+  const client = createAnthropicClient(opts.apiKey);
   const from = opts.fromStep ?? "research";
   const to = opts.toStep ?? "scripts";
   const steps = stepsBetween(from, to);

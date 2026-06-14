@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
+import { createAnthropicClient } from "@/lib/llm/anthropicClient";
 import { eq } from "drizzle-orm";
 import { v4 as uuid } from "uuid";
 
@@ -63,24 +64,27 @@ export async function POST(request: NextRequest) {
   });
   const totalDurationSec = cursor;
 
-  const client = new Anthropic({ apiKey: body.apiKey });
+  const client = createAnthropicClient(body.apiKey);
 
   try {
-    const response = await client.messages.create({
-      model: body.model,
-      max_tokens: 1500,
-      system: CLIPS_SYSTEM_PROMPT,
-      messages: [
-        {
-          role: "user",
-          content: getClipsPrompt(
-            research?.topic ?? "Untitled",
-            totalDurationSec,
-            segments
-          ),
-        },
-      ],
-    });
+    const response = await client.messages.create(
+      {
+        model: body.model,
+        max_tokens: 1500,
+        system: CLIPS_SYSTEM_PROMPT,
+        messages: [
+          {
+            role: "user",
+            content: getClipsPrompt(
+              research?.topic ?? "Untitled",
+              totalDurationSec,
+              segments
+            ),
+          },
+        ],
+      },
+      { signal: request.signal }
+    );
 
     const text = response.content
       .map((part) => (part.type === "text" ? part.text : ""))
