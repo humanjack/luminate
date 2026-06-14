@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
+import { createAnthropicClient } from "@/lib/llm/anthropicClient";
 import { eq } from "drizzle-orm";
 
 import { db, claims, sources } from "@/lib/db";
@@ -63,7 +64,7 @@ export async function POST(_request: NextRequest, { params }: RouteParams) {
           { status: 400 },
         );
       }
-      const client = new Anthropic({ apiKey: config.anthropicApiKey });
+      const client = createAnthropicClient(config.anthropicApiKey);
       verdicts = await verifyClaims(client, config.model || "claude-sonnet-4-6", verifiable);
     }
 

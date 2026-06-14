@@ -13,6 +13,7 @@
  * orchestration (Tavily/Brave) lands when those providers are implemented.
  */
 import Anthropic from "@anthropic-ai/sdk";
+import { createAnthropicClient } from "@/lib/llm/anthropicClient";
 
 import {
   GROUNDED_RESEARCH_SYSTEM_PROMPT,
@@ -60,7 +61,7 @@ export async function* generateAgenticResearch(
     maxSources: config.maxSources,
     maxSearchIterations: config.maxSearchIterations,
   });
-  const client = new Anthropic({ apiKey: config.anthropicApiKey });
+  const client = createAnthropicClient(config.anthropicApiKey);
   const model = config.model || "claude-sonnet-4-6";
   const strategy = routeResearchStrategy(depth);
 
