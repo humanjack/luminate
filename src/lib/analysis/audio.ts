@@ -8,12 +8,35 @@ const FILLER_WORDS = ["um", "uh", "uhm", "er", "ah", "like", "you know", "so", "
 
 export const COMMON_FILLERS = FILLER_WORDS;
 
+/** Absolute filesystem root for managed recordings: <cwd>/public/recordings. */
+export function recordingsRoot(): string {
+  return path.join(process.cwd(), "public", "recordings");
+}
+
+/**
+ * Resolve a stored recording path to an absolute file, constrained to the
+ * managed recordings tree. Rejects absolute paths and any `..` traversal that
+ * escapes the root — previously this returned ANY absolute path verbatim,
+ * which let an attacker-controlled `audioPath` (e.g. "/etc/passwd") be read by
+ * ffmpeg and shipped to the speech provider.
+ */
 export function resolveAudioFile(audioPath: string): string {
-  if (audioPath.startsWith("/recordings/")) {
-    return path.join(process.cwd(), "public", audioPath.replace(/^\//, ""));
+  const root = recordingsRoot();
+  // Strip the stored web prefix ("/recordings/" or "recordings/") to a path
+  // relative to the recordings root.
+  let rel = audioPath;
+  if (rel.startsWith("/recordings/")) rel = rel.slice("/recordings/".length);
+  else if (rel.startsWith("recordings/")) rel = rel.slice("recordings/".length);
+
+  if (path.isAbsolute(rel)) {
+    throw new Error(`Refusing to resolve absolute audio path: ${audioPath}`);
   }
-  if (path.isAbsolute(audioPath)) return audioPath;
-  return path.join(process.cwd(), audioPath);
+
+  const resolved = path.resolve(root, rel);
+  if (resolved !== root && !resolved.startsWith(root + path.sep)) {
+    throw new Error(`Audio path escapes the recordings directory: ${audioPath}`);
+  }
+  return resolved;
 }
 
 export async function readAudioBuffer(audioPath: string): Promise<Buffer> {
