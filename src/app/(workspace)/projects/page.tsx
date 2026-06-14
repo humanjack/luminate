@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Plus, Video, Trash2, Search, ArrowLeft, ArrowUpDown } from "lucide-react";
+import { Plus, Video, Trash2, Search, ArrowLeft, ArrowUpDown, CircleAlert, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -32,7 +32,7 @@ type SortOption = "date-desc" | "date-asc" | "name-asc" | "name-desc";
 
 export default function ProjectsPage() {
   const router = useRouter();
-  const { projects, loadProjects, createProject, deleteProject, isLoading } = useProjectStore();
+  const { projects, loadProjects, createProject, deleteProject, isLoading, error } = useProjectStore();
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("date-desc");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -212,6 +212,21 @@ export default function ProjectsPage() {
         {isLoading ? (
           <div className="text-center py-12 text-muted-foreground">
             Loading projects...
+          </div>
+        ) : error ? (
+          <div
+            role="alert"
+            className="text-center py-12 flex flex-col items-center gap-3"
+          >
+            <CircleAlert className="w-8 h-8 text-destructive" />
+            <p className="text-muted-foreground">
+              Couldn’t load your projects. This is a load error, not an empty
+              list — your data is likely still there.
+            </p>
+            <Button variant="outline" onClick={() => loadProjects()}>
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Retry
+            </Button>
           </div>
         ) : sortedProjects.length === 0 ? (
           <EmptyState
