@@ -6,6 +6,7 @@ import { useInProcessResearch } from "@/lib/research/generate";
 import { generateAgenticResearch } from "@/lib/research/loop";
 import { parseJson } from "@/lib/api/validate";
 import { researchGenerateSchema } from "@/lib/api/schemas";
+import { rateLimited, LLM_CALL_LIMIT } from "@/lib/net/rateLimit";
 
 export const runtime = "nodejs";
 
@@ -23,6 +24,9 @@ function sse(data: unknown): Uint8Array {
  * FastAPI backend (legacy single-prompt path).
  */
 export async function POST(request: NextRequest) {
+  const limited = rateLimited(request, "llm-research", LLM_CALL_LIMIT);
+  if (limited) return limited;
+
   const parsed = await parseJson(request, researchGenerateSchema);
   if (!parsed.ok) return parsed.response;
   const { topic, depth } = parsed.data;

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { createAnthropicClient } from "@/lib/llm/anthropicClient";
+import { rateLimited, LLM_CALL_LIMIT } from "@/lib/net/rateLimit";
 import { eq } from "drizzle-orm";
 import { v4 as uuid } from "uuid";
 
@@ -29,6 +30,9 @@ interface SeoBody {
 }
 
 export async function POST(request: NextRequest) {
+  const limited = rateLimited(request, "llm-seo", LLM_CALL_LIMIT);
+  if (limited) return limited;
+
   const body = (await request.json()) as SeoBody;
 
   if (!body.projectId || !body.apiKey || !body.model) {

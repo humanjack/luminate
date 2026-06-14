@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { runAgent } from "@/lib/agent/runner";
 import type { AgentStepName } from "@/lib/agent/types";
+import { rateLimited, AGENT_RUN_LIMIT } from "@/lib/net/rateLimit";
 
 export const runtime = "nodejs";
 // Agent runs can take minutes; bump per-route timeout.
@@ -19,6 +20,9 @@ interface RunBody {
 }
 
 export async function POST(request: NextRequest) {
+  const limited = rateLimited(request, "agent-run", AGENT_RUN_LIMIT);
+  if (limited) return limited;
+
   const body = (await request.json()) as RunBody;
 
   if (!body.projectId || !body.apiKey || !body.model) {
