@@ -1,7 +1,7 @@
 import Database from "better-sqlite3";
-import path from "path";
+import { dbFilePath } from "@/lib/paths";
 
-const dbPath = path.join(process.cwd(), "luminate.db");
+const dbPath = dbFilePath();
 
 export function initializeDatabase() {
   const sqlite = new Database(dbPath);
