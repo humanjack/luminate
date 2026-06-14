@@ -1,8 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { db, recordings } from "@/lib/db";
 import { eq } from "drizzle-orm";
 import { unlink } from "fs/promises";
 import path from "path";
+import { ok, fail, serverError } from "@/lib/api/respond";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -14,20 +15,16 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
     const { id } = await params;
     const [row] = await db.select().from(recordings).where(eq(recordings.id, id));
     if (!row) {
-      return NextResponse.json({ error: "Recording not found" }, { status: 404 });
+      return fail("not_found", "Recording not found", 404);
     }
     if (row.audioPath?.startsWith("/recordings/")) {
       const absolute = path.join(process.cwd(), "public", row.audioPath);
       await unlink(absolute).catch(() => undefined);
     }
     await db.delete(recordings).where(eq(recordings.id, id));
-    return NextResponse.json({ success: true });
+    return ok({ success: true });
   } catch (error) {
-    console.error("Failed to delete recording:", error);
-    return NextResponse.json(
-      { error: "Failed to delete recording" },
-      { status: 500 }
-    );
+    return serverError(error, { message: "Failed to delete recording" });
   }
 }
 
@@ -37,14 +34,10 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
     const { id } = await params;
     const [row] = await db.select().from(recordings).where(eq(recordings.id, id));
     if (!row) {
-      return NextResponse.json({ error: "Recording not found" }, { status: 404 });
+      return fail("not_found", "Recording not found", 404);
     }
-    return NextResponse.json(row);
+    return ok(row);
   } catch (error) {
-    console.error("Failed to load recording:", error);
-    return NextResponse.json(
-      { error: "Failed to load recording" },
-      { status: 500 }
-    );
+    return serverError(error, { message: "Failed to load recording" });
   }
 }

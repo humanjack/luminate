@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { db, projects, slides, thumbnails } from "@/lib/db";
 import { desc, eq } from "drizzle-orm";
 import { v4 as uuid } from "uuid";
+import { ok, fail, serverError } from "@/lib/api/respond";
 
 // GET /api/projects - List all projects (enriched with a lightweight preview:
 // the first slide's markdown and the selected thumbnail's SVG, for card art).
@@ -36,13 +37,9 @@ export async function GET() {
       thumbnailSvg: thumbMap.get(p.id) ?? null,
     }));
 
-    return NextResponse.json(enriched);
+    return ok(enriched);
   } catch (error) {
-    console.error("Failed to fetch projects:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch projects" },
-      { status: 500 }
-    );
+    return serverError(error, { message: "Failed to fetch projects" });
   }
 }
 
@@ -53,10 +50,7 @@ export async function POST(request: NextRequest) {
     const name = typeof body?.name === "string" ? body.name.trim() : "";
 
     if (!name) {
-      return NextResponse.json(
-        { error: "Project name is required" },
-        { status: 400 }
-      );
+      return fail("validation_error", "Project name is required", 400);
     }
 
     const id = uuid();
@@ -74,12 +68,8 @@ export async function POST(request: NextRequest) {
       })
       .returning();
 
-    return NextResponse.json(newProject, { status: 201 });
+    return ok(newProject, { status: 201 });
   } catch (error) {
-    console.error("Failed to create project:", error);
-    return NextResponse.json(
-      { error: "Failed to create project" },
-      { status: 500 }
-    );
+    return serverError(error, { message: "Failed to create project" });
   }
 }
