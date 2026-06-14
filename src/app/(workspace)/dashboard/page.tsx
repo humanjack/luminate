@@ -79,7 +79,7 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      <main className="container mx-auto px-6 py-8" data-testid="dashboard">
+      <main id="main-content" className="container mx-auto px-6 py-8" data-testid="dashboard">
         {loading && (
           <p className="text-sm text-muted-foreground">Loading dashboard…</p>
         )}

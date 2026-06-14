@@ -111,7 +111,7 @@ export default function ProjectLayout({ children, params }: ProjectLayoutProps) 
       <header className="flex items-center justify-between px-4 py-2 border-b bg-background">
         <div className="flex items-center gap-4">
           <Link href="/projects">
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" aria-label="Back to projects">
               <ArrowLeft className="w-4 h-4" />
             </Button>
           </Link>
@@ -125,13 +125,13 @@ export default function ProjectLayout({ children, params }: ProjectLayoutProps) 
         <div className="flex items-center gap-2">
           <ThemeToggle />
           <Link href="/settings">
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" aria-label="Settings">
               <Settings className="w-4 h-4" />
             </Button>
           </Link>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" aria-label="Project options">
                 <MoreVertical className="w-4 h-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -157,7 +157,7 @@ export default function ProjectLayout({ children, params }: ProjectLayoutProps) 
       <WorkflowStepper projectId={id} />
 
       {/* Main content */}
-      <main className="flex-1 overflow-hidden">{children}</main>
+      <main id="main-content" className="flex-1 overflow-hidden">{children}</main>
 
       {/* Floating AI agent panel (S1) */}
       <AgentRunPanel projectId={id} />

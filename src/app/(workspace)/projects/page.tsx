@@ -128,12 +128,12 @@ export default function ProjectsPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8">
+      <main id="main-content" className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
             <Link href="/">
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" aria-label="Back to home">
                 <ArrowLeft className="w-4 h-4" />
               </Button>
             </Link>
@@ -283,6 +283,7 @@ export default function ProjectsPage() {
                     <Button
                       variant="ghost"
                       size="icon"
+                      aria-label="Delete project"
                       className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
                       onClick={(e) => {
                         e.preventDefault();
@@ -317,7 +318,7 @@ export default function ProjectsPage() {
             ))}
           </div>
         )}
-      </div>
+      </main>
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>

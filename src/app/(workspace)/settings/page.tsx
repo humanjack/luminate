@@ -505,12 +505,12 @@ export default function SettingsPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
+      <main id="main-content" className="container mx-auto px-4 py-8 max-w-4xl">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
             <Link href="/">
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" aria-label="Back to home">
                 <ArrowLeft className="w-4 h-4" />
               </Button>
             </Link>
@@ -1362,7 +1362,7 @@ export default function SettingsPage() {
             </Card>
           </TabsContent>
         </Tabs>
-      </div>
+      </main>
     </div>
   );
 }
