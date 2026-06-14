@@ -1,10 +1,9 @@
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import * as schema from "./schema";
-import path from "path";
+import { dbFilePath } from "@/lib/paths";
 
-const dbPath = path.join(process.cwd(), "luminate.db");
-const sqlite = new Database(dbPath);
+const sqlite = new Database(dbFilePath());
 
 // Enable foreign keys
 sqlite.pragma("foreign_keys = ON");

@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { unlink } from "fs/promises";
 import path from "path";
 import { ok, fail, serverError } from "@/lib/api/respond";
+import { mediaRoot } from "@/lib/paths";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -18,7 +19,7 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
       return fail("not_found", "Recording not found", 404);
     }
     if (row.audioPath?.startsWith("/recordings/")) {
-      const absolute = path.join(process.cwd(), "public", row.audioPath);
+      const absolute = path.join(mediaRoot(), row.audioPath);
       await unlink(absolute).catch(() => undefined);
     }
     await db.delete(recordings).where(eq(recordings.id, id));

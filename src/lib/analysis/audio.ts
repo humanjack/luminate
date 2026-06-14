@@ -3,14 +3,15 @@ import { promises as fs } from "fs";
 import path from "path";
 import { tmpdir } from "os";
 import { randomUUID } from "crypto";
+import { mediaRoot } from "@/lib/paths";
 
 const FILLER_WORDS = ["um", "uh", "uhm", "er", "ah", "like", "you know", "so", "actually", "basically", "literally", "right"];
 
 export const COMMON_FILLERS = FILLER_WORDS;
 
-/** Absolute filesystem root for managed recordings: <cwd>/public/recordings. */
+/** Absolute filesystem root for managed recordings: <mediaRoot>/recordings. */
 export function recordingsRoot(): string {
-  return path.join(process.cwd(), "public", "recordings");
+  return path.join(mediaRoot(), "recordings");
 }
 
 /**
