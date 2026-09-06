@@ -56,6 +56,10 @@
   body {
     @apply bg-background text-foreground;
   }
+  /* Visible keyboard focus baseline (mouse users keep the default, no ring). */
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
 }
 
 /* Custom scrollbar */

@@ -1,12 +1,64 @@
 import Database from "better-sqlite3";
-import path from "path";
+import { dbFilePath } from "@/lib/paths";
 
-const dbPath = path.join(process.cwd(), "luminate.db");
+const dbPath = dbFilePath();
 
-export function initializeDatabase() {
+/** The full set of tables the app's DDL provisions. */
+export const EXPECTED_TABLES = [
+  "projects",
+  "research_data",
+  "content_data",
+  "slides",
+  "scripts",
+  "recordings",
+  "analysis_results",
+  "videos",
+  "sources",
+  "claims",
+  "outline_items",
+  "exports",
+  "settings",
+  "agent_runs",
+  "agent_steps",
+  "video_metadata",
+  "thumbnails",
+  "clip_suggestions",
+] as const;
+
+/** Diff the live schema against EXPECTED_TABLES. */
+export function verifySchema(sqlite: Database.Database): {
+  ok: boolean;
+  present: string[];
+  missing: string[];
+} {
+  const rows = sqlite
+    .prepare("SELECT name FROM sqlite_master WHERE type='table'")
+    .all() as Array<{ name: string }>;
+  const live = new Set(rows.map((r) => r.name));
+  const present = EXPECTED_TABLES.filter((t) => live.has(t));
+  const missing = EXPECTED_TABLES.filter((t) => !live.has(t));
+  return { ok: missing.length === 0, present, missing };
+}
+
+/**
+ * Provision the database (idempotent). Opens a connection separate from the
+ * long-lived app singleton, sets concurrency-friendly pragmas, runs the DDL,
+ * and verifies all expected tables exist before reporting success. Returns the
+ * number of tables verified.
+ */
+export function initializeDatabase(): number {
   const sqlite = new Database(dbPath);
   try {
+    sqlite.pragma("busy_timeout = 5000");
+    sqlite.pragma("journal_mode = WAL");
     createTables(sqlite);
+    const check = verifySchema(sqlite);
+    if (!check.ok) {
+      throw new Error(
+        `Schema verification failed — missing tables: ${check.missing.join(", ")}`
+      );
+    }
+    return check.present.length;
   } finally {
     sqlite.close();
   }
@@ -15,8 +67,10 @@ export function initializeDatabase() {
 // Creates the full schema on the given connection. Exported so tests can
 // build an in-memory database from the exact DDL the app runs.
 export function createTables(sqlite: Database.Database) {
-  // Enable foreign keys
+  // Enable foreign keys + wait (rather than immediately erroring) if the DB is
+  // briefly locked by a concurrent hot-DB request.
   sqlite.pragma("foreign_keys = ON");
+  sqlite.pragma("busy_timeout = 5000");
 
   // Create tables
   sqlite.exec(`

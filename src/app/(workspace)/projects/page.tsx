@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Plus, Video, Trash2, Search, ArrowLeft, ArrowUpDown } from "lucide-react";
+import { Plus, Video, Trash2, Search, ArrowLeft, ArrowUpDown, CircleAlert, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -32,7 +32,7 @@ type SortOption = "date-desc" | "date-asc" | "name-asc" | "name-desc";
 
 export default function ProjectsPage() {
   const router = useRouter();
-  const { projects, loadProjects, createProject, deleteProject, isLoading } = useProjectStore();
+  const { projects, loadProjects, createProject, deleteProject, isLoading, error } = useProjectStore();
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("date-desc");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -128,12 +128,12 @@ export default function ProjectsPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8">
+      <main id="main-content" className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
             <Link href="/">
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" aria-label="Back to home">
                 <ArrowLeft className="w-4 h-4" />
               </Button>
             </Link>
@@ -213,6 +213,21 @@ export default function ProjectsPage() {
           <div className="text-center py-12 text-muted-foreground">
             Loading projects...
           </div>
+        ) : error ? (
+          <div
+            role="alert"
+            className="text-center py-12 flex flex-col items-center gap-3"
+          >
+            <CircleAlert className="w-8 h-8 text-destructive" />
+            <p className="text-muted-foreground">
+              Couldn’t load your projects. This is a load error, not an empty
+              list — your data is likely still there.
+            </p>
+            <Button variant="outline" onClick={() => loadProjects()}>
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Retry
+            </Button>
+          </div>
         ) : sortedProjects.length === 0 ? (
           <EmptyState
             icon={<Video className="w-8 h-8" />}
@@ -283,6 +298,7 @@ export default function ProjectsPage() {
                     <Button
                       variant="ghost"
                       size="icon"
+                      aria-label="Delete project"
                       className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
                       onClick={(e) => {
                         e.preventDefault();
@@ -317,7 +333,7 @@ export default function ProjectsPage() {
             ))}
           </div>
         )}
-      </div>
+      </main>
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>

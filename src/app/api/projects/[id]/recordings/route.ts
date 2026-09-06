@@ -4,6 +4,7 @@ import { and, eq } from "drizzle-orm";
 import { v4 as uuid } from "uuid";
 import { writeFile, mkdir, unlink } from "fs/promises";
 import path from "path";
+import { mediaRoot } from "@/lib/paths";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -59,7 +60,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     // Always a server-minted path under the managed recordings tree.
-    const recordingsDir = path.join(process.cwd(), "public", "recordings", projectId);
+    const recordingsDir = path.join(mediaRoot(), "recordings", projectId);
     await mkdir(recordingsDir, { recursive: true });
     const fileName = `${recordingId}.webm`;
     const audioPath = `/recordings/${projectId}/${fileName}`;
@@ -79,7 +80,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         );
       for (const old of prior) {
         if (old.audioPath?.startsWith("/recordings/")) {
-          const absolute = path.join(process.cwd(), "public", old.audioPath);
+          const absolute = path.join(mediaRoot(), old.audioPath);
           await unlink(absolute).catch(() => undefined);
         }
         await db.delete(recordings).where(eq(recordings.id, old.id));
@@ -145,7 +146,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       .where(eq(recordings.projectId, projectId));
     for (const r of existing) {
       if (r.audioPath?.startsWith("/recordings/")) {
-        const absolute = path.join(process.cwd(), "public", r.audioPath);
+        const absolute = path.join(mediaRoot(), r.audioPath);
         await unlink(absolute).catch(() => undefined);
       }
     }

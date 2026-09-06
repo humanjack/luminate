@@ -13,6 +13,7 @@ import { v4 as uuid } from "uuid";
 import path from "path";
 import { writeFile, mkdir } from "fs/promises";
 import { renderProjectVideo, RenderSlideInput } from "@/lib/export/render";
+import { mediaRoot } from "@/lib/paths";
 import {
   buildSegments,
   toVtt,
@@ -103,7 +104,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         index: slide.index,
         title: parseSlideTitle(slide.markdown),
         body: parseSlideBody(slide.markdown),
-        audioAbsolutePath: path.join(process.cwd(), "public", rec.audioPath),
+        audioAbsolutePath: path.join(mediaRoot(), rec.audioPath),
         duration: rec.duration,
       });
       // Sanity check
@@ -139,7 +140,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       }))
     );
 
-    const exportsDir = path.join(process.cwd(), "public", "exports", projectId);
+    const exportsDir = path.join(mediaRoot(), "exports", projectId);
     await mkdir(exportsDir, { recursive: true });
     const captionsPath = path.join(exportsDir, `${exportId}.vtt`);
     const srtPath = path.join(exportsDir, `${exportId}.srt`);

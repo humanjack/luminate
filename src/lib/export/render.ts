@@ -1,6 +1,7 @@
 import { spawn } from "child_process";
 import { mkdir, writeFile, unlink, readFile } from "fs/promises";
 import path from "path";
+import { mediaRoot } from "@/lib/paths";
 
 export interface RenderSlideInput {
   /** 0-based slide index */
@@ -77,7 +78,7 @@ export async function renderProjectVideo(
   options: RenderProjectOptions
 ): Promise<RenderResult> {
   const { projectId, slides, resolution, onProgress } = options;
-  const outDir = path.join(process.cwd(), "public", "exports", projectId);
+  const outDir = path.join(mediaRoot(), "exports", projectId);
   await mkdir(outDir, { recursive: true });
 
   const total = slides.length;

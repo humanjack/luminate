@@ -4,8 +4,8 @@ import { initializeDatabase } from "@/lib/db/migrations";
 // GET /api/init - Initialize the database
 export async function GET() {
   try {
-    initializeDatabase();
-    return NextResponse.json({ success: true, message: "Database initialized" });
+    const tables = initializeDatabase();
+    return NextResponse.json({ success: true, message: "Database initialized", tables });
   } catch (error) {
     console.error("Database initialization failed:", error);
     return NextResponse.json(

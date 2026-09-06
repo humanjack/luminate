@@ -88,7 +88,16 @@ export function useLLM() {
           });
 
           if (!response.ok) {
-            throw new Error(`Failed to start ${label} generation`);
+            // Surface the server's actionable error (e.g. the proxy's
+            // BACKEND_UNAVAILABLE message) instead of a generic string.
+            let message = `Failed to start ${label} generation`;
+            try {
+              const body = await response.json();
+              if (body?.error && typeof body.error === "string") message = body.error;
+            } catch {
+              /* non-JSON body — keep the generic message */
+            }
+            throw new Error(message);
           }
           if (!response.body) {
             throw new Error("No response body");
