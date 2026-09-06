@@ -17,6 +17,9 @@ updates:
           - "@types/*"
       dev-dependencies:
         dependency-type: development
+        update-types:
+          - minor
+          - patch
     ignore:
       # Framework majors are a deliberate, human migration decision in a
       # Next-16 / React-19 app — not something to auto-bump.
