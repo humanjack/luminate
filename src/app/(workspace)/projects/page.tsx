@@ -299,7 +299,7 @@ export default function ProjectsPage() {
                       variant="ghost"
                       size="icon"
                       aria-label="Delete project"
-                      className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                      className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
                       onClick={(e) => {
                         e.preventDefault();
                         toggleSelect(project.id, e);

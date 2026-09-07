@@ -46,7 +46,7 @@ export function WorkflowStepper({ projectId }: WorkflowStepperProps) {
                   aria-current={isActive ? "step" : undefined}
                   className={cn(
                     "flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200",
-                    isActive && "bg-primary text-primary-foreground shadow-sm",
+                    isActive && "bg-primary text-primary-foreground shadow-xs",
                     !isActive && isClickable && "hover:bg-muted",
                     !isClickable && "opacity-50 cursor-not-allowed"
                   )}
@@ -95,7 +95,7 @@ export function WorkflowStepper({ projectId }: WorkflowStepperProps) {
                       className={cn(
                         "h-full transition-all duration-500",
                         connectorFilled
-                          ? "w-full bg-gradient-to-r from-emerald-500 to-emerald-400"
+                          ? "w-full bg-linear-to-r/srgb from-emerald-500 to-emerald-400"
                           : "w-0"
                       )}
                     />
@@ -121,7 +121,7 @@ export function WorkflowStepper({ projectId }: WorkflowStepperProps) {
         data-testid="workflow-progress"
       >
         <div
-          className="h-full bg-gradient-to-r from-indigo-500 to-violet-500 transition-[width] duration-500 ease-out"
+          className="h-full bg-linear-to-r/srgb from-indigo-500 to-violet-500 transition-[width] duration-500 ease-out"
           style={{ width: `${progressPct}%` }}
           data-testid="workflow-progress-fill"
         />

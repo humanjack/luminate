@@ -51,8 +51,8 @@ export default function DashboardPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-muted">
-      <header className="border-b bg-background/80 backdrop-blur sticky top-0 z-10">
+    <div className="min-h-screen bg-linear-to-br/srgb from-background to-muted">
+      <header className="border-b bg-background/80 backdrop-blur-sm sticky top-0 z-10">
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link href="/">
@@ -241,7 +241,7 @@ function StepFunnel({ data }: { data: number[] }) {
           </div>
           <div className="flex-1 h-7 bg-muted/70 rounded-md overflow-hidden">
             <div
-              className="bar-grow h-full rounded-md bg-gradient-to-r from-indigo-500 to-violet-500 transition-[filter] group-hover:brightness-110"
+              className="bar-grow h-full rounded-md bg-linear-to-r/srgb from-indigo-500 to-violet-500 transition-[filter] group-hover:brightness-110"
               style={{ width: `${(n / max) * 100}%`, animationDelay: `${i * 55}ms` }}
             />
           </div>

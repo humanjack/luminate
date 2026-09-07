@@ -460,7 +460,7 @@ function AnalysisEditor({ id }: { id: string }) {
                         <ul className="space-y-2">
                           {currentAnalysis.recommendations.map((rec, i) => (
                             <li key={i} className="flex items-start gap-2 text-sm">
-                              <CheckCircle className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                              <CheckCircle className="h-4 w-4 text-primary mt-0.5 shrink-0" />
                               <span>{rec}</span>
                             </li>
                           ))}

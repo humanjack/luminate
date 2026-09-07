@@ -187,7 +187,7 @@ function SlidesEditor({ id }: { id: string }) {
                     onClick={() => setCurrentSlideIndex(index)}
                     aria-label={`Jump to slide ${index + 1}`}
                     className={cn(
-                      "flex-shrink-0 w-32 rounded transition focus:outline-none",
+                      "shrink-0 w-32 rounded transition focus:outline-hidden",
                       index === currentSlideIndex
                         ? "ring-2 ring-indigo-500"
                         : "opacity-80 hover:opacity-100"

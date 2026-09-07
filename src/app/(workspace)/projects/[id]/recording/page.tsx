@@ -396,7 +396,7 @@ export default function RecordingPage({ params }: PageProps) {
 
               {/* Live input waveform */}
               {showWaveform && (
-                <div className="space-y-2">
+                <div className="flex flex-col gap-2">
                   <Label>Audio Level</Label>
                   <div className="rounded-lg bg-muted/50 px-3 py-2">
                     <Waveform
@@ -413,7 +413,7 @@ export default function RecordingPage({ params }: PageProps) {
             </div>
 
             {/* Recording Controls */}
-            <div className="space-y-4">
+            <div className="flex flex-col gap-4">
               <Label>Recording Controls</Label>
 
               <Card>

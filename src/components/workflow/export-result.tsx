@@ -91,7 +91,7 @@ export function ExportResult({
               {posterMarkdown ? (
                 <SlideCanvas markdown={posterMarkdown} theme={posterTheme ?? "default"} variant="preview" />
               ) : (
-                <div className="aspect-video w-full bg-gradient-to-br from-primary/20 to-primary/5" />
+                <div className="aspect-video w-full bg-linear-to-br/srgb from-primary/20 to-primary/5" />
               )}
               <div className="absolute inset-0 flex items-center justify-center bg-black/10">
                 <span className="flex items-center justify-center h-14 w-14 rounded-full bg-white/85 text-black shadow-lg">

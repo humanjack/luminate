@@ -233,7 +233,7 @@ export default function VideoPage({ params }: PageProps) {
           <ClipExtractor projectId={id} />
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
             {/* Preview */}
-            <div className="lg:col-span-2 space-y-4">
+            <div className="lg:col-span-2 flex flex-col gap-4">
               <Label>Preview</Label>
 
               {/* Video Preview Area */}
@@ -314,12 +314,12 @@ export default function VideoPage({ params }: PageProps) {
             </div>
 
             {/* Export Settings */}
-            <div className="space-y-4">
+            <div className="flex flex-col gap-4">
               <Label>Export Settings</Label>
 
               <Card>
                 <CardContent className="p-4 space-y-4">
-                  <div className="space-y-2">
+                  <div className="flex flex-col gap-2">
                     <Label className="text-xs">Resolution</Label>
                     <Select value={resolution} onValueChange={setResolution}>
                       <SelectTrigger>
@@ -333,7 +333,7 @@ export default function VideoPage({ params }: PageProps) {
                     </Select>
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="flex flex-col gap-2">
                     <Label className="text-xs">Transition</Label>
                     <Select value={transition} onValueChange={setTransition}>
                       <SelectTrigger>

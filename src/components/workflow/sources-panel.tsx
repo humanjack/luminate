@@ -191,7 +191,7 @@ export function SourcesPanel({
         )}
 
         {sources.length > 0 && (
-          <div className="space-y-2">
+          <div className="flex flex-col gap-2">
             <Label className="text-xs">Saved sources</Label>
             <ul className="space-y-2" data-testid="source-list">
               {sources.map((s) => (
@@ -239,7 +239,7 @@ export function SourcesPanel({
         )}
 
         {claims.length > 0 && (
-          <div className="space-y-2">
+          <div className="flex flex-col gap-2">
             <Label className="text-xs">Extracted claims</Label>
             <ul className="space-y-1" data-testid="claim-list">
               {claims.map((c) => {
