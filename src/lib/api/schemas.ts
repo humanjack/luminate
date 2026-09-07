@@ -19,3 +19,14 @@ export const recordingCreateSchema = z.object({
   slideIndex: z.number().int().optional(),
   waveformData: z.array(z.number()).optional(),
 });
+
+/** Bodies of the in-process content and script generation routes. */
+export const contentGenerateSchema = z.object({
+  research: z.string().trim().min(1, "Research content is required").max(200_000),
+  format: z.enum(["presentation", "tutorial", "explainer"]).default("presentation"),
+  targetLength: z.number().int().min(1).max(120).default(10),
+});
+export const scriptGenerateSchema = z.object({
+  slideContent: z.string().trim().min(1, "Slide content is required").max(100_000),
+  slideIndex: z.number().int().min(0).default(0),
+});

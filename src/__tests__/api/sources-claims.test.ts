@@ -30,21 +30,26 @@ vi.mock("@/lib/db", () => {
   const TABLE_SOURCES = { __table: "sources", id: "id", projectId: "projectId" };
   const TABLE_CLAIMS = { __table: "claims", id: "id", projectId: "projectId" };
   const cond = (kind: string, key: string, value: unknown) => ({ kind, key, value });
+  const query = <T,>(value?: T) => Object.assign(Promise.resolve(value), {
+    run: () => value,
+    all: () => value,
+  });
   return {
     db: {
+      transaction<T>(callback: (tx: unknown) => T): T { return callback(this); },
       select: () => ({
         from: (table: { __table: string }) => ({
           where: (c: ReturnType<typeof cond>) => {
             const which =
               table.__table === "sources" ? state.sources : state.claims;
             if (c.kind === "eq") {
-              return Promise.resolve(
+              return query(
                 which.filter(
                   (r) => (r as Record<string, unknown>)[c.key] === c.value
                 )
               );
             }
-            return Promise.resolve([]);
+            return query([]);
           },
         }),
       }),
@@ -56,6 +61,7 @@ vi.mock("@/lib/db", () => {
           else state.claims.push(...(arr as ClaimRow[]));
           return {
             returning: () => Promise.resolve(arr),
+            run: () => arr,
           };
         },
       }),
@@ -75,7 +81,7 @@ vi.mock("@/lib/db", () => {
               (r) => (r as Record<string, unknown>)[c.key] !== c.value
             ) as never;
           }
-          return Promise.resolve();
+          return query();
         },
       }),
     },

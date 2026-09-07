@@ -63,8 +63,6 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       }
     }
 
-    await db.delete(outlineItems).where(eq(outlineItems.projectId, projectId));
-
     const now = new Date();
     const rows: typeof outlineItems.$inferInsert[] = items.map((item) => ({
       id: item.id || uuid(),
@@ -79,23 +77,20 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       updatedAt: now,
     }));
 
-    if (rows.length > 0) {
-      await db.insert(outlineItems).values(rows);
-    }
+    const saved = db.transaction((tx) => {
+      tx.delete(outlineItems).where(eq(outlineItems.projectId, projectId)).run();
+      if (rows.length > 0) tx.insert(outlineItems).values(rows).run();
 
-    // If all items are approved, advance the project step (#3 = Slides)
-    const allApproved = rows.length > 0 && rows.every((r) => r.approved);
-    if (allApproved) {
-      await db
-        .update(projects)
-        .set({ currentStep: 3, updatedAt: now })
-        .where(eq(projects.id, projectId));
-    }
-
-    const saved = await db
-      .select()
-      .from(outlineItems)
-      .where(eq(outlineItems.projectId, projectId));
+      // If all items are approved, advance the project step (#3 = Slides).
+      if (rows.length > 0 && rows.every((row) => row.approved)) {
+        tx.update(projects)
+          .set({ currentStep: 3, updatedAt: now })
+          .where(eq(projects.id, projectId))
+          .run();
+      }
+      return tx.select().from(outlineItems)
+        .where(eq(outlineItems.projectId, projectId)).all();
+    });
     saved.sort((a, b) => a.index - b.index);
     return NextResponse.json(saved, { status: 200 });
   } catch (error) {

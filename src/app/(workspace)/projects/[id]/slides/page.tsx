@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { useState, use } from "react";
 import { ChevronLeft, ChevronRight, Palette } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -18,6 +18,7 @@ import { StepContainer } from "@/components/workflow/step-container";
 import { StepNavigation } from "@/components/workflow/step-navigation";
 import { SlideCanvas } from "@/components/workflow/slide-canvas";
 import { SLIDE_THEMES, type SlideTheme } from "@/lib/slides/themes";
+import { useDraftState } from "@/hooks/use-draft-state";
 import { useProjectStore } from "@/stores/project-store";
 import { cn } from "@/lib/utils";
 
@@ -34,39 +35,29 @@ interface SlideData {
 
 export default function SlidesPage({ params }: PageProps) {
   const { id } = use(params);
-  const { currentProject, saveSlides } = useProjectStore();
+  return <SlidesEditor key={id} id={id} />;
+}
 
-  const [slides, setSlides] = useState<SlideData[]>([]);
-  const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
-  const [theme, setTheme] = useState<SlideTheme>("default");
-  const [isSaving, setIsSaving] = useState(false);
+function SlidesEditor({ id }: { id: string }) {
+  const { currentProject: storedProject, saveSlides } = useProjectStore();
+  const currentProject = storedProject?.id === id ? storedProject : null;
 
-  // Parse slides from content markdown
-  useEffect(() => {
-
-    if (currentProject?.slides && currentProject.slides.length > 0) {
-      // Load existing slides
-      setSlides(
-        currentProject.slides.map((s) => ({
-          id: s.id,
-          markdown: s.markdown,
-          imageData: s.imageData || undefined,
-          theme: s.theme || "default",
+  const [slides, setSlides, acknowledgeSlides] = useDraftState<SlideData[]>(
+    currentProject?.slides?.length
+      ? currentProject.slides.map((slide) => ({
+          id: slide.id, markdown: slide.markdown,
+          imageData: slide.imageData ?? undefined, theme: slide.theme ?? "default",
         }))
-      );
-      const t = currentProject.slides[0]?.theme;
-      if (t && (SLIDE_THEMES as readonly string[]).includes(t)) {
-        setTheme(t as SlideTheme);
-      }
-    } else if (currentProject?.contentData?.markdown) {
-      // Parse from content markdown
-      const sections = currentProject.contentData.markdown
-        .split("---")
-        .filter((s) => s.trim());
-      setSlides(sections.map((markdown) => ({ markdown: markdown.trim() })));
-    } else {
-    }
-  }, [currentProject]);
+      : (currentProject?.contentData?.markdown ?? "").split("---")
+          .filter((section) => section.trim()).map((markdown) => ({ markdown: markdown.trim() }))
+  );
+  const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
+  const savedTheme = currentProject?.slides?.[0]?.theme;
+  const [theme, setTheme, acknowledgeTheme] = useDraftState<SlideTheme>(
+    savedTheme && (SLIDE_THEMES as readonly string[]).includes(savedTheme)
+      ? savedTheme as SlideTheme : "default"
+  );
+  const [isSaving, setIsSaving] = useState(false);
 
   const currentSlide = slides[currentSlideIndex];
 
@@ -107,6 +98,8 @@ export default function SlidesPage({ params }: PageProps) {
           theme,
         }))
       );
+      acknowledgeSlides(slides);
+      acknowledgeTheme(theme);
       setIsSaving(false);
       return true;
     } catch (error) {

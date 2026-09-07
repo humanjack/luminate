@@ -1,8 +1,9 @@
 import { NextRequest } from "next/server";
 
-import { proxyLLMStream } from "@/lib/llm/proxy";
+import { generationResponse } from "@/lib/llm/generate";
+import { RESEARCH_SYSTEM_PROMPT, getResearchPrompt } from "@/lib/llm/prompts";
 import { loadResearchGenerationConfig } from "@/lib/research/config";
-import { useInProcessResearch } from "@/lib/research/generate";
+import { shouldUseInProcessResearch } from "@/lib/research/generate";
 import { generateAgenticResearch } from "@/lib/research/loop";
 import { parseJson } from "@/lib/api/validate";
 import { researchGenerateSchema } from "@/lib/api/schemas";
@@ -20,8 +21,7 @@ function sse(data: unknown): Uint8Array {
  *
  * When grounded web research is enabled (Settings → Research), generation runs
  * in-process via the Anthropic SDK with the native web_search tool, streaming
- * text + real sources (Phase 1, #45). Otherwise it falls back to proxying the
- * FastAPI backend (legacy single-prompt path).
+ * text + real sources (Phase 1, #45). Otherwise it uses the selected provider directly in Next.js.
  */
 export async function POST(request: NextRequest) {
   const limited = rateLimited(request, "llm-research", LLM_CALL_LIMIT);
@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
 
   const config = await loadResearchGenerationConfig();
 
-  if (useInProcessResearch(config)) {
+  if (shouldUseInProcessResearch(config)) {
     const stream = new ReadableStream({
       async start(controller) {
         try {
@@ -58,6 +58,5 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  // Fallback: proxy to the FastAPI backend (legacy single-prompt path)
-  return proxyLLMStream("/api/llm/research", { topic, depth }, "LLM Research");
+  return generationResponse(request, RESEARCH_SYSTEM_PROMPT, getResearchPrompt(topic, depth), 8192);
 }

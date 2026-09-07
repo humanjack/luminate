@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { useState, use } from "react";
 import { Sparkles, AlertCircle, Settings } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,7 @@ import { StepContainer } from "@/components/workflow/step-container";
 import { StepNavigation } from "@/components/workflow/step-navigation";
 import { LLMProgressPanel, LLMStatus } from "@/components/workflow/llm-progress-panel";
 import { OutlineEditor, DraftOutlineItem } from "@/components/workflow/outline-editor";
+import { useDraftState } from "@/hooks/use-draft-state";
 import { useProjectStore } from "@/stores/project-store";
 import { useSettingsStore } from "@/stores/settings-store";
 import { useLLM } from "@/hooks/useLLM";
@@ -32,14 +33,19 @@ interface PageProps {
 
 export default function ContentPage({ params }: PageProps) {
   const { id } = use(params);
-  const { currentProject, saveContentData, saveOutline } = useProjectStore();
-  const { hasValidLLMConfig, llmProvider } = useSettingsStore();
+  return <ContentEditor key={id} id={id} />;
+}
+
+function ContentEditor({ id }: { id: string }) {
+  const { currentProject: storedProject, saveContentData, saveOutline } = useProjectStore();
+  const currentProject = storedProject?.id === id ? storedProject : null;
+  const { hasValidServerLLMConfig, llmProvider } = useSettingsStore();
   const { streamContent } = useLLM();
 
-  const [title, setTitle] = useState("");
-  const [format, setFormat] = useState<"presentation" | "tutorial" | "explainer">("presentation");
-  const [targetLength, setTargetLength] = useState(10);
-  const [markdown, setMarkdown] = useState("");
+  const [title, setTitle, acknowledgeTitle] = useDraftState(currentProject?.contentData?.title || "");
+  const [format, setFormat, acknowledgeFormat] = useDraftState<"presentation" | "tutorial" | "explainer">(currentProject?.contentData?.format || "presentation");
+  const [targetLength, setTargetLength, acknowledgeTargetLength] = useDraftState(currentProject?.contentData?.targetLength || 10);
+  const [markdown, setMarkdown, acknowledgeMarkdown] = useDraftState(currentProject?.contentData?.markdown || "");
   const [isGenerating, setIsGenerating] = useState(false);
   const [activeTab, setActiveTab] = useState("edit");
   const [outlineSaving, setOutlineSaving] = useState(false);
@@ -50,16 +56,6 @@ export default function ContentPage({ params }: PageProps) {
   const [currentPrompt, setCurrentPrompt] = useState<string>("");
   const [streamingOutput, setStreamingOutput] = useState<string>("");
   const [llmError, setLlmError] = useState<string>("");
-
-  // Load existing content data
-  useEffect(() => {
-    if (currentProject?.contentData) {
-      setTitle(currentProject.contentData.title || "");
-      setFormat(currentProject.contentData.format || "presentation");
-      setTargetLength(currentProject.contentData.targetLength || 10);
-      setMarkdown(currentProject.contentData.markdown || "");
-    }
-  }, [currentProject]);
 
   const handleGenerate = async () => {
     if (!currentProject?.researchData?.content) return;
@@ -123,8 +119,14 @@ export default function ContentPage({ params }: PageProps) {
           outline,
           markdown: fullContent,
         });
+        acknowledgeTitle(title);
+        acknowledgeFormat(format);
+        acknowledgeTargetLength(targetLength);
+        acknowledgeMarkdown(fullContent);
       } catch (error) {
         console.error(`Auto-save failed: ${(error as Error).message}`);
+        setLlmError(`Could not save: ${(error as Error).message}`);
+        setLlmStatus("error");
       }
     }
     setIsGenerating(false);
@@ -137,6 +139,7 @@ export default function ContentPage({ params }: PageProps) {
       await saveOutline(id, items);
     } catch (err) {
       setOutlineError((err as Error).message || "Failed to save outline");
+      throw err;
     } finally {
       setOutlineSaving(false);
     }
@@ -168,14 +171,20 @@ export default function ContentPage({ params }: PageProps) {
         outline,
         markdown,
       });
+      acknowledgeTitle(title);
+      acknowledgeFormat(format);
+      acknowledgeTargetLength(targetLength);
+      acknowledgeMarkdown(markdown);
       return true;
     } catch (error) {
       console.error(`handleSaveAndNext failed: ${(error as Error).message}`);
+      setLlmError(`Could not save: ${(error as Error).message}`);
+      setLlmStatus("error");
       return false;
     }
   };
 
-  const isValid = hasValidLLMConfig();
+  const isValid = hasValidServerLLMConfig();
   const hasResearch = !!currentProject?.researchData?.content;
 
   // Outline gate (issue #5): user must approve every outline item before slides
