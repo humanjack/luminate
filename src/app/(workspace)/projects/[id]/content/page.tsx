@@ -272,7 +272,7 @@ function ContentEditor({ id }: { id: string }) {
           )}
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="md:col-span-2 space-y-2">
+            <div className="md:col-span-2 flex flex-col gap-2">
               <Label htmlFor="title">Presentation Title</Label>
               <Input
                 id="title"
@@ -283,7 +283,7 @@ function ContentEditor({ id }: { id: string }) {
               />
             </div>
 
-            <div className="space-y-2">
+            <div className="flex flex-col gap-2">
               <Label>Format</Label>
               <Select
                 value={format}
@@ -301,7 +301,7 @@ function ContentEditor({ id }: { id: string }) {
               </Select>
             </div>
 
-            <div className="space-y-2">
+            <div className="flex flex-col gap-2">
               <Label>Target Length</Label>
               <Select
                 value={targetLength.toString()}

@@ -157,7 +157,7 @@ export function ThumbnailPicker({ projectId }: ThumbnailPickerProps) {
                   type="button"
                   onClick={() => select(variant.preset)}
                   data-testid={`thumbnail-${variant.preset}`}
-                  className={`group relative rounded-lg border overflow-hidden transition focus:outline-none focus:ring-2 focus:ring-fuchsia-400 ${
+                  className={`group relative rounded-lg border overflow-hidden transition focus:outline-hidden focus:ring-2 focus:ring-fuchsia-400 ${
                     variant.selected
                       ? "border-fuchsia-500 ring-2 ring-fuchsia-500"
                       : "border-border hover:border-fuchsia-300"

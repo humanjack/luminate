@@ -288,7 +288,7 @@ function ResearchEditor({ id }: { id: string }) {
           )}
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="md:col-span-2 space-y-2">
+            <div className="md:col-span-2 flex flex-col gap-2">
               <Label htmlFor="topic">Topic</Label>
               <div className="flex gap-2">
                 <Input
@@ -317,7 +317,7 @@ function ResearchEditor({ id }: { id: string }) {
               </div>
             </div>
 
-            <div className="space-y-2">
+            <div className="flex flex-col gap-2">
               <Label>Research Depth</Label>
               <Select
                 value={depth}

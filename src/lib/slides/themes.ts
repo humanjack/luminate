@@ -15,7 +15,7 @@ export interface ThemeTokens {
 
 export const THEMES: Record<SlideTheme, ThemeTokens> = {
   default: {
-    surface: "bg-gradient-to-br from-slate-50 via-white to-indigo-50 text-slate-900",
+    surface: "bg-linear-to-br/srgb from-slate-50 via-white to-indigo-50 text-slate-900",
     title: "text-slate-900",
     subtitle: "text-indigo-700",
     body: "text-slate-700",
@@ -26,7 +26,7 @@ export const THEMES: Record<SlideTheme, ThemeTokens> = {
     codeBlock: "bg-slate-900 text-slate-50",
   },
   dark: {
-    surface: "bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 text-slate-50",
+    surface: "bg-linear-to-br/srgb from-slate-950 via-slate-900 to-indigo-950 text-slate-50",
     title: "text-white",
     subtitle: "text-indigo-300",
     body: "text-slate-200",
@@ -37,7 +37,7 @@ export const THEMES: Record<SlideTheme, ThemeTokens> = {
     codeBlock: "bg-black/60 text-emerald-200",
   },
   playful: {
-    surface: "bg-gradient-to-br from-amber-100 via-rose-100 to-fuchsia-200 text-slate-900",
+    surface: "bg-linear-to-br/srgb from-amber-100 via-rose-100 to-fuchsia-200 text-slate-900",
     title: "text-fuchsia-900",
     subtitle: "text-rose-700",
     body: "text-slate-800",

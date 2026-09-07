@@ -560,7 +560,7 @@ export default function SettingsPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="space-y-2">
+                <div className="flex flex-col gap-2">
                   <Label>Provider</Label>
                   <Select
                     value={llmProvider}
@@ -594,7 +594,7 @@ export default function SettingsPage() {
 
                 {llmProvider === "anthropic" ? (
                   <>
-                    <div className="space-y-2">
+                    <div className="flex flex-col gap-2">
                       <Label>Anthropic API Key</Label>
                       <div className="flex gap-2">
                         <Input
@@ -667,7 +667,7 @@ export default function SettingsPage() {
                   </>
                 ) : llmProvider === "openai" ? (
                   <>
-                    <div className="space-y-2">
+                    <div className="flex flex-col gap-2">
                       <Label>OpenAI API Key</Label>
                       <div className="flex gap-2">
                         <Input
@@ -740,7 +740,7 @@ export default function SettingsPage() {
                   </>
                 ) : llmProvider === "google" ? (
                   <>
-                    <div className="space-y-2">
+                    <div className="flex flex-col gap-2">
                       <Label>Google API Key</Label>
                       <div className="flex gap-2">
                         <Input
@@ -812,7 +812,7 @@ export default function SettingsPage() {
                     </div>
                   </>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="flex flex-col gap-2">
                     <Label>Claude Code CLI</Label>
                     <div className="flex gap-2">
                       <div className="flex-1 px-3 py-2 border rounded-md bg-muted text-muted-foreground text-sm">
@@ -849,7 +849,7 @@ export default function SettingsPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="space-y-2">
+                <div className="flex flex-col gap-2">
                   <Label>Provider</Label>
                   <Select
                     value={speechProvider}
@@ -875,7 +875,7 @@ export default function SettingsPage() {
 
                 {speechProvider === "azure" ? (
                   <>
-                    <div className="space-y-2">
+                    <div className="flex flex-col gap-2">
                       <Label>Azure Speech Key</Label>
                       <Input
                         type="password"
@@ -887,7 +887,7 @@ export default function SettingsPage() {
                         }}
                       />
                     </div>
-                    <div className="space-y-2">
+                    <div className="flex flex-col gap-2">
                       <Label>Azure Region</Label>
                       <div className="flex gap-2">
                         <Input
@@ -944,7 +944,7 @@ export default function SettingsPage() {
                   </div>
                 ) : speechProvider === "speechsuper" ? (
                   <>
-                    <div className="space-y-2">
+                    <div className="flex flex-col gap-2">
                       <Label>SpeechSuper API Key</Label>
                       <Input
                         type="password"
@@ -956,7 +956,7 @@ export default function SettingsPage() {
                         }}
                       />
                     </div>
-                    <div className="space-y-2">
+                    <div className="flex flex-col gap-2">
                       <Label>SpeechSuper App ID</Label>
                       <div className="flex gap-2">
                         <Input
@@ -984,7 +984,7 @@ export default function SettingsPage() {
                     </div>
                   </>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="flex flex-col gap-2">
                     <Label>ELSA API Key</Label>
                     <div className="flex gap-2">
                       <Input
@@ -1036,7 +1036,7 @@ export default function SettingsPage() {
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
+                  <div className="flex flex-col gap-0.5">
                     <Label>Enable web research</Label>
                     <p className="text-xs text-muted-foreground">
                       Fetch real sources during generation and tie claims to them.
@@ -1052,7 +1052,7 @@ export default function SettingsPage() {
 
                 <Separator />
 
-                <div className="space-y-2">
+                <div className="flex flex-col gap-2">
                   <Label>Search provider</Label>
                   <Select
                     value={searchProvider}
@@ -1080,7 +1080,7 @@ export default function SettingsPage() {
                 </div>
 
                 {searchProvider === "tavily" && (
-                  <div className="space-y-2">
+                  <div className="flex flex-col gap-2">
                     <Label>Tavily API Key</Label>
                     <Input
                       type="password"
@@ -1103,7 +1103,7 @@ export default function SettingsPage() {
                 )}
 
                 {searchProvider === "brave" && (
-                  <div className="space-y-2">
+                  <div className="flex flex-col gap-2">
                     <Label>Brave Search API Key</Label>
                     <Input
                       type="password"
@@ -1128,7 +1128,7 @@ export default function SettingsPage() {
                 <Separator />
 
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
+                  <div className="flex flex-col gap-2">
                     <Label>Max sources</Label>
                     <Input
                       type="number"
@@ -1143,7 +1143,7 @@ export default function SettingsPage() {
                       Upper bound on sources gathered per research run.
                     </p>
                   </div>
-                  <div className="space-y-2">
+                  <div className="flex flex-col gap-2">
                     <Label>Max search iterations</Label>
                     <Input
                       type="number"
@@ -1182,7 +1182,7 @@ export default function SettingsPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="space-y-2">
+                <div className="flex flex-col gap-2">
                   <Label>Default Recording Mode</Label>
                   <Select
                     value={defaultRecordingMode}
@@ -1204,7 +1204,7 @@ export default function SettingsPage() {
                 </div>
 
                 <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
+                  <div className="flex flex-col gap-0.5">
                     <Label>Show Waveform</Label>
                     <p className="text-xs text-muted-foreground">
                       Display audio waveform visualization during recording.
@@ -1220,7 +1220,7 @@ export default function SettingsPage() {
 
                 <Separator />
 
-                <div className="space-y-2">
+                <div className="flex flex-col gap-2">
                   <Label>Teleprompter Speed (WPM)</Label>
                   <Input
                     type="number"
@@ -1238,7 +1238,7 @@ export default function SettingsPage() {
                   </p>
                 </div>
 
-                <div className="space-y-2">
+                <div className="flex flex-col gap-2">
                   <Label>Teleprompter Font Size</Label>
                   <Input
                     type="number"
@@ -1266,7 +1266,7 @@ export default function SettingsPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="space-y-2">
+                <div className="flex flex-col gap-2">
                   <Label>Default Resolution</Label>
                   <Select
                     value={defaultResolution}
@@ -1285,7 +1285,7 @@ export default function SettingsPage() {
                   </Select>
                 </div>
 
-                <div className="space-y-2">
+                <div className="flex flex-col gap-2">
                   <Label>Default Transition</Label>
                   <Select
                     value={defaultTransition}
@@ -1317,7 +1317,7 @@ export default function SettingsPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="space-y-2">
+                <div className="flex flex-col gap-2">
                   <Label>Theme</Label>
                   <Select value={activeTheme} onValueChange={(v) => handleThemeChange(v as Theme)}>
                     <SelectTrigger>
@@ -1334,7 +1334,7 @@ export default function SettingsPage() {
                 <Separator />
 
                 <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
+                  <div className="flex flex-col gap-0.5">
                     <Label>Auto-save</Label>
                     <p className="text-xs text-muted-foreground">
                       Automatically save your work periodically.
@@ -1347,7 +1347,7 @@ export default function SettingsPage() {
                 </div>
 
                 {autoSave && (
-                  <div className="space-y-2">
+                  <div className="flex flex-col gap-2">
                     <Label>Auto-save Interval (seconds)</Label>
                     <Input
                       type="number"
