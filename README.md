@@ -18,7 +18,7 @@ A Python **FastAPI** backend exists under [`/backend`](backend) but is **frozen/
 
 ## Quickstart
 
-Prerequisites: Node matching [`.nvmrc`](.nvmrc) (Node 22; `engines` floor is ≥ 20.9), plus a system **`ffmpeg`** binary for video export and speech analysis.
+Prerequisites: Node matching [`.nvmrc`](.nvmrc) (Node 22 or newer; required by better-sqlite3 13), plus a system **`ffmpeg`** binary for video export and speech analysis.
 
 ```bash
 nvm use            # or install Node 22
