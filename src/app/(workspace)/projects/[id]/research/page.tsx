@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { useState, use } from "react";
 import { Sparkles, AlertCircle, Settings } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,7 @@ import {
   type TrustSummaryData,
   type ClaimVerdict,
 } from "@/components/workflow/trust-summary";
+import { useDraftState } from "@/hooks/use-draft-state";
 import { useProjectStore } from "@/stores/project-store";
 import { useSettingsStore } from "@/stores/settings-store";
 import { useLLM } from "@/hooks/useLLM";
@@ -38,13 +39,18 @@ interface PageProps {
 
 export default function ResearchPage({ params }: PageProps) {
   const { id } = use(params);
-  const { currentProject, saveResearchData, loadProject } = useProjectStore();
-  const { hasValidLLMConfig, llmProvider } = useSettingsStore();
+  return <ResearchEditor key={id} id={id} />;
+}
+
+function ResearchEditor({ id }: { id: string }) {
+  const { currentProject: storedProject, saveResearchData, loadProject } = useProjectStore();
+  const currentProject = storedProject?.id === id ? storedProject : null;
+  const { hasValidServerLLMConfig, llmProvider } = useSettingsStore();
   const { streamResearch } = useLLM();
 
-  const [topic, setTopic] = useState("");
-  const [depth, setDepth] = useState<"quick" | "detailed" | "comprehensive">("detailed");
-  const [content, setContent] = useState("");
+  const [topic, setTopic, acknowledgeTopic] = useDraftState(currentProject?.researchData?.topic || "");
+  const [depth, setDepth, acknowledgeDepth] = useDraftState<"quick" | "detailed" | "comprehensive">(currentProject?.researchData?.depth || "detailed");
+  const [content, setContent, acknowledgeContent] = useDraftState(currentProject?.researchData?.content || "");
   const [contentView, setContentView] = useState<"reader" | "edit">("reader");
   const [isGenerating, setIsGenerating] = useState(false);
 
@@ -59,15 +65,6 @@ export default function ResearchPage({ params }: PageProps) {
   const [trustSummary, setTrustSummary] = useState<TrustSummaryData | null>(null);
   const [verdicts, setVerdicts] = useState<ClaimVerdict[]>([]);
   const [isVerifying, setIsVerifying] = useState(false);
-
-  // Load existing research data
-  useEffect(() => {
-    if (currentProject?.researchData) {
-      setTopic(currentProject.researchData.topic || "");
-      setDepth(currentProject.researchData.depth || "detailed");
-      setContent(currentProject.researchData.content || "");
-    }
-  }, [currentProject]);
 
   const handleGenerate = async () => {
     if (!topic.trim()) return;
@@ -132,6 +129,9 @@ export default function ResearchPage({ params }: PageProps) {
           sources:
             groundedSources.length > 0 ? groundedSources : extractSources(fullContent),
         });
+        acknowledgeTopic(topic);
+        acknowledgeDepth(depth);
+        acknowledgeContent(fullContent);
 
         // Persist claims separately so the outline step can cite them
         const extracted = extractClaimsFromMarkdown(fullContent, projectSources);
@@ -150,6 +150,8 @@ export default function ResearchPage({ params }: PageProps) {
         }
       } catch (error) {
         console.error(`Auto-save failed: ${(error as Error).message}`);
+        setLlmError(`Could not save: ${(error as Error).message}`);
+        setLlmStatus("error");
       }
     }
     setResearchPhase("");
@@ -224,9 +226,14 @@ export default function ResearchPage({ params }: PageProps) {
         content,
         sources: extractSources(content),
       });
+      acknowledgeTopic(topic);
+      acknowledgeDepth(depth);
+      acknowledgeContent(content);
       return true;
     } catch (error) {
       console.error(`handleSaveAndNext failed: ${(error as Error).message}`);
+      setLlmError(`Could not save: ${(error as Error).message}`);
+      setLlmStatus("error");
       return false;
     }
   };
@@ -244,7 +251,7 @@ export default function ResearchPage({ params }: PageProps) {
     return sources;
   };
 
-  const isValid = hasValidLLMConfig();
+  const isValid = hasValidServerLLMConfig();
 
   return (
     <div className="flex flex-col h-full overflow-hidden">

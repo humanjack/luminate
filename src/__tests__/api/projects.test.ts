@@ -42,7 +42,7 @@ import { db } from "@/lib/db";
 // Helper to create mock NextRequest
 function createMockRequest(
   method: string,
-  body?: any,
+  body?: unknown,
   url = "http://localhost:3000/api/projects"
 ): NextRequest {
   const init: ConstructorParameters<typeof NextRequest>[1] = {
@@ -226,7 +226,7 @@ describe("Projects API", () => {
     });
 
     it("should set default values for new project", async () => {
-      let insertedValues: any;
+      let insertedValues: Partial<typeof import("@/lib/db/schema").projects.$inferInsert> = {};
 
       (db.insert as ReturnType<typeof vi.fn>).mockReturnValue({
         values: vi.fn().mockImplementation((vals) => {

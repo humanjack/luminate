@@ -26,19 +26,24 @@ const state: {
 vi.mock("@/lib/db", () => {
   const cond = (kind: string, key: string, value: unknown) => ({ kind, key, value });
 
+  const query = <T,>(value?: T) => Object.assign(Promise.resolve(value), {
+    run: () => value,
+    all: () => value,
+  });
   return {
     db: {
+      transaction<T>(callback: (tx: unknown) => T): T { return callback(this); },
       select: () => ({
         from: () => ({
           where: (c: ReturnType<typeof cond>) => {
             if (c.kind === "eq") {
-              return Promise.resolve(
+              return query(
                 state.outline.filter(
                   (r) => (r as Record<string, unknown>)[c.key] === c.value
                 )
               );
             }
-            return Promise.resolve([]);
+            return query([]);
           },
         }),
       }),
@@ -46,7 +51,7 @@ vi.mock("@/lib/db", () => {
         values: (rows: OutlineRow | OutlineRow[]) => {
           const arr = Array.isArray(rows) ? rows : [rows];
           state.outline.push(...arr);
-          return Promise.resolve(arr);
+          return query(arr);
         },
       }),
       update: () => ({
@@ -55,7 +60,7 @@ vi.mock("@/lib/db", () => {
             if (c.kind === "eq" && c.key === "id" && typeof patch.currentStep === "number") {
               state.projectStep.set(c.value as string, patch.currentStep);
             }
-            return Promise.resolve();
+            return query();
           },
         }),
       }),
@@ -66,7 +71,7 @@ vi.mock("@/lib/db", () => {
               (r) => (r as Record<string, unknown>)[c.key] !== c.value
             );
           }
-          return Promise.resolve();
+          return query();
         },
       }),
     },

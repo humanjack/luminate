@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
   Bot,
   ChevronDown,
@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/select";
 import { useProjectStore } from "@/stores/project-store";
 import { useSettingsStore } from "@/stores/settings-store";
+import { useDraftState } from "@/hooks/use-draft-state";
 import { formatCost } from "@/lib/agent/cost";
 import {
   AGENT_STEPS,
@@ -59,14 +60,15 @@ export function AgentRunPanel({ projectId }: AgentRunPanelProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [running, setRunning] = useState(false);
-  const [topic, setTopic] = useState("");
-  const [depth, setDepth] = useState<"quick" | "detailed" | "comprehensive">(
-    "detailed"
+  const project = currentProject?.id === projectId ? currentProject : null;
+  const [topic, setTopic] = useDraftState(project?.researchData?.topic ?? "");
+  const [depth, setDepth] = useDraftState<"quick" | "detailed" | "comprehensive">(
+    project?.researchData?.depth ?? "detailed"
   );
-  const [format, setFormat] = useState<"presentation" | "tutorial" | "explainer">(
-    "presentation"
+  const [format, setFormat] = useDraftState<"presentation" | "tutorial" | "explainer">(
+    project?.contentData?.format ?? "presentation"
   );
-  const [targetLength, setTargetLength] = useState(5);
+  const [targetLength, setTargetLength] = useDraftState(project?.contentData?.targetLength ?? 5);
   const [steps, setSteps] = useState<StepView[]>([]);
   const [costUsd, setCostUsd] = useState(0);
   const [tokensIn, setTokensIn] = useState(0);
@@ -76,20 +78,6 @@ export function AgentRunPanel({ projectId }: AgentRunPanelProps) {
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (currentProject?.researchData?.topic && !topic) {
-      setTopic(currentProject.researchData.topic);
-    }
-    if (currentProject?.researchData?.depth) {
-      setDepth(currentProject.researchData.depth);
-    }
-    if (currentProject?.contentData?.format) {
-      setFormat(currentProject.contentData.format);
-    }
-    if (currentProject?.contentData?.targetLength) {
-      setTargetLength(currentProject.contentData.targetLength);
-    }
-  }, [currentProject, topic]);
 
   const cancel = useCallback(() => {
     abortRef.current?.abort();
@@ -104,6 +92,48 @@ export function AgentRunPanel({ projectId }: AgentRunPanelProps) {
 
   const isAnthropic = llmProvider === "anthropic";
   const canRun = isAnthropic && hasValidLLMConfig() && topic.trim().length > 0;
+
+  const handleEvent = useCallback((event: AgentEvent) => {
+    setSteps((prev) => {
+      if (event.type === "step_started" && event.step) {
+        return prev.map((s) =>
+          s.step === event.step ? { ...s, state: "running", preview: "" } : s
+        );
+      }
+      if (event.type === "step_chunk" && event.step && event.content) {
+        return prev.map((s) =>
+          s.step === event.step
+            ? { ...s, preview: (s.preview + event.content).slice(-280) }
+            : s
+        );
+      }
+      if (event.type === "step_completed" && event.step) {
+        return prev.map((s) =>
+          s.step === event.step ? { ...s, state: "completed" } : s
+        );
+      }
+      return prev;
+    });
+
+    if (event.type === "cost_update") {
+      if (typeof event.costUsd === "number") setCostUsd(event.costUsd);
+      if (typeof event.inputTokens === "number") setTokensIn(event.inputTokens);
+      if (typeof event.outputTokens === "number") setTokensOut(event.outputTokens);
+    }
+
+    if (event.type === "run_completed") {
+      setCompleted(true);
+    }
+
+    if (event.type === "run_error" && event.error) {
+      setError(event.error);
+    }
+
+    // Auto-scroll to latest activity
+    requestAnimationFrame(() => {
+      scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
+    });
+  }, []);
 
   const run = useCallback(async () => {
     if (!canRun) {
@@ -192,49 +222,9 @@ export function AgentRunPanel({ projectId }: AgentRunPanelProps) {
     targetLength,
     startSteps,
     loadProject,
+    handleEvent,
   ]);
 
-  const handleEvent = useCallback((event: AgentEvent) => {
-    setSteps((prev) => {
-      if (event.type === "step_started" && event.step) {
-        return prev.map((s) =>
-          s.step === event.step ? { ...s, state: "running", preview: "" } : s
-        );
-      }
-      if (event.type === "step_chunk" && event.step && event.content) {
-        return prev.map((s) =>
-          s.step === event.step
-            ? { ...s, preview: (s.preview + event.content).slice(-280) }
-            : s
-        );
-      }
-      if (event.type === "step_completed" && event.step) {
-        return prev.map((s) =>
-          s.step === event.step ? { ...s, state: "completed" } : s
-        );
-      }
-      return prev;
-    });
-
-    if (event.type === "cost_update") {
-      if (typeof event.costUsd === "number") setCostUsd(event.costUsd);
-      if (typeof event.inputTokens === "number") setTokensIn(event.inputTokens);
-      if (typeof event.outputTokens === "number") setTokensOut(event.outputTokens);
-    }
-
-    if (event.type === "run_completed") {
-      setCompleted(true);
-    }
-
-    if (event.type === "run_error" && event.error) {
-      setError(event.error);
-    }
-
-    // Auto-scroll to latest activity
-    requestAnimationFrame(() => {
-      scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
-    });
-  }, []);
 
   if (collapsed) {
     return (

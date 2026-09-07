@@ -23,14 +23,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     const now = new Date();
 
-    // Delete existing slides
-    await db.delete(slides).where(eq(slides.projectId, projectId));
-
-    // Insert new slides
-    const newSlides = await Promise.all(
-      slidesData.map(async (slide: any, index: number) => {
-        const [created] = await db
-          .insert(slides)
+    const newSlides = db.transaction((tx) => {
+      tx.delete(slides).where(eq(slides.projectId, projectId)).run();
+      const inserted = slidesData.map((slide: typeof slides.$inferInsert, index: number) =>
+        tx.insert(slides)
           .values({
             id: slide.id || uuid(),
             projectId,
@@ -41,16 +37,15 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             createdAt: now,
             updatedAt: now,
           })
-          .returning();
-        return created;
-      })
-    );
-
-    // Update project step
-    await db
-      .update(projects)
-      .set({ currentStep: 4, updatedAt: now })
-      .where(eq(projects.id, projectId));
+          .returning()
+          .get()
+      );
+      tx.update(projects)
+        .set({ currentStep: 4, updatedAt: now })
+        .where(eq(projects.id, projectId))
+        .run();
+      return inserted;
+    });
 
     return NextResponse.json(newSlides);
   } catch (error) {
