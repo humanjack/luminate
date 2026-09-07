@@ -19,7 +19,7 @@ export async function POST() {
         stderr += data.toString();
       });
 
-      child.on("error", (error: any) => {
+      child.on("error", (error: NodeJS.ErrnoException) => {
         if (error.code === "ENOENT") {
           resolve({
             valid: false,
@@ -28,7 +28,7 @@ export async function POST() {
         } else {
           resolve({
             valid: false,
-            error: `Failed to run Claude CLI: ${error.message}`,
+            error: `Failed to run Claude CLI: ${error instanceof Error ? error.message : "Unknown error"}`,
           });
         }
       });
@@ -59,10 +59,10 @@ export async function POST() {
     });
 
     return NextResponse.json(result);
-  } catch (error: any) {
+  } catch (error) {
     return NextResponse.json({
       valid: false,
-      error: `Failed to verify Claude CLI: ${error.message}`,
+      error: `Failed to verify Claude CLI: ${error instanceof Error ? error.message : "Unknown error"}`,
     });
   }
 }

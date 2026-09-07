@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { render, screen, act } from "@testing-library/react";
+import { render, screen, act, fireEvent } from "@testing-library/react";
 import { LLMProgressPanel } from "@/components/workflow/llm-progress-panel";
 
 describe("LLMProgressPanel (#71)", () => {
@@ -36,6 +36,24 @@ describe("LLMProgressPanel (#71)", () => {
   it("renders nothing when idle with no prompt or output", () => {
     const { container } = render(<LLMProgressPanel status="idle" />);
     expect(container).toBeEmptyDOMElement();
+  });
+
+  it("auto-expands on active phase transitions while preserving a collapse between streamed chunks", () => {
+    const { rerender } = render(<LLMProgressPanel status="complete" output="First output" />);
+    fireEvent.click(screen.getByText("Complete"));
+    expect(screen.queryByText("First output")).not.toBeInTheDocument();
+    rerender(<LLMProgressPanel status="preparing" prompt="Next prompt" />);
+    expect(screen.getByText("Next prompt")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("Preparing request..."));
+    rerender(<LLMProgressPanel status="streaming" output="Chunk one" />);
+    expect(screen.getByText("Chunk one")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("Receiving response..."));
+    rerender(<LLMProgressPanel status="streaming" output="Chunk one and two" />);
+    expect(screen.queryByText("Chunk one and two")).not.toBeInTheDocument();
+    rerender(<LLMProgressPanel status="complete" output="Chunk one and two" />);
+    expect(screen.queryByText("Chunk one and two")).not.toBeInTheDocument();
+    rerender(<LLMProgressPanel status="streaming" output="New run" />);
+    expect(screen.getByText("New run")).toBeInTheDocument();
   });
 
   describe("elapsed meter", () => {

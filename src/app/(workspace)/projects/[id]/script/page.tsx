@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StepContainer } from "@/components/workflow/step-container";
 import { StepNavigation } from "@/components/workflow/step-navigation";
 import { LLMProgressPanel, LLMStatus } from "@/components/workflow/llm-progress-panel";
+import { useDraftState } from "@/hooks/use-draft-state";
 import { useProjectStore } from "@/stores/project-store";
 import { useSettingsStore } from "@/stores/settings-store";
 import { useLLM } from "@/hooks/useLLM";
@@ -30,13 +31,37 @@ interface ScriptData {
 
 export default function ScriptPage({ params }: PageProps) {
   const { id } = use(params);
-  const { currentProject, saveScripts } = useProjectStore();
+  return <ScriptEditor key={id} id={id} />;
+}
+
+function ScriptEditor({ id }: { id: string }) {
+  const { currentProject: storedProject, saveScripts } = useProjectStore();
+  const currentProject = storedProject?.id === id ? storedProject : null;
   const { llmProvider } = useSettingsStore();
   const { streamScript, hasValidConfig } = useLLM();
 
-  const [scripts, setScripts] = useState<ScriptData[]>([]);
+  const deckIdentity = JSON.stringify((currentProject?.slides ?? []).map((slide) => slide.id));
+  const [scripts, setScripts, acknowledgeScripts] = useDraftState<ScriptData[]>(
+    (currentProject?.slides ?? []).map((slide, slideIndex) => {
+      const script = currentProject?.scripts?.find((entry) =>
+        entry.slideId === slide.id || (!entry.slideId && entry.slideIndex === slideIndex)
+      );
+      return {
+        slideIndex, slideId: slide.id, text: script?.text ?? "",
+        speakerNotes: script?.speakerNotes ?? undefined,
+        estimatedDuration: script?.estimatedDuration ?? 0,
+      };
+    }),
+    deckIdentity
+  );
+  const activeDeckRef = useRef<string | null>(deckIdentity);
+  useEffect(() => {
+    activeDeckRef.current = deckIdentity;
+    return () => { activeDeckRef.current = null; };
+  }, [deckIdentity]);
+
   const scriptsRef = useRef<ScriptData[]>([]); // Ref to track current scripts for async operations
-  const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
+  const [currentSlideIndex, setCurrentSlideIndex] = useDraftState(0, deckIdentity);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatingIndex, setGeneratingIndex] = useState<number | null>(null);
 
@@ -50,35 +75,6 @@ export default function ScriptPage({ params }: PageProps) {
   const [currentPrompt, setCurrentPrompt] = useState<string>("");
   const [streamingOutput, setStreamingOutput] = useState<string>("");
   const [llmError, setLlmError] = useState<string>("");
-
-  // Initialize scripts from slides or load existing scripts
-  useEffect(() => {
-
-    if (currentProject?.scripts && currentProject.scripts.length > 0) {
-      // Load existing scripts from database
-      const loadedScripts = currentProject.scripts.map((s) => ({
-        slideIndex: s.slideIndex,
-        slideId: s.slideId || undefined,
-        text: s.text,
-        speakerNotes: s.speakerNotes || undefined,
-        estimatedDuration: s.estimatedDuration || 0,
-      }));
-      // Log first script text length to verify data is present
-      if (loadedScripts[0]) {
-      }
-      setScripts(loadedScripts);
-    } else if (currentProject?.slides) {
-      // Initialize empty scripts for each slide
-      setScripts(
-        currentProject.slides.map((slide, index) => ({
-          slideIndex: index,
-          slideId: slide.id,
-          text: "",
-          estimatedDuration: 0,
-        }))
-      );
-    }
-  }, [currentProject]);
 
   const currentScript = scripts[currentSlideIndex];
   const currentSlide = currentProject?.slides?.[currentSlideIndex];
@@ -115,6 +111,12 @@ export default function ScriptPage({ params }: PageProps) {
     setLlmStatus("streaming");
 
     for await (const message of generator) {
+      if (activeDeckRef.current !== deckIdentity) {
+        setIsGenerating(false);
+        setGeneratingIndex(null);
+        setLlmStatus("idle");
+        return;
+      }
       if (message.type === "text") {
         fullText += message.content;
         setStreamingOutput(fullText);
@@ -136,6 +138,14 @@ export default function ScriptPage({ params }: PageProps) {
       }
     }
 
+    // The deck may be replaced while awaiting the final stream result.
+    if (activeDeckRef.current !== deckIdentity) {
+      setIsGenerating(false);
+      setGeneratingIndex(null);
+      setLlmStatus("idle");
+      return;
+    }
+
     if (!hasError) {
       setLlmStatus("complete");
       // Auto-save the updated scripts after generation completes
@@ -147,9 +157,13 @@ export default function ScriptPage({ params }: PageProps) {
             ? { ...script, text: fullText, estimatedDuration: estimateReadingTime(fullText) }
             : script
         );
+        setScripts(updatedScripts);
         await saveScripts(id, updatedScripts);
+        acknowledgeScripts(updatedScripts);
       } catch (error) {
         console.error(`Auto-save failed: ${(error as Error).message}`);
+        setLlmError(`Could not save: ${(error as Error).message}`);
+        setLlmStatus("error");
       }
     }
     setIsGenerating(false);
@@ -187,9 +201,12 @@ export default function ScriptPage({ params }: PageProps) {
 
     try {
       await saveScripts(id, scripts);
+      acknowledgeScripts(scripts);
       return true;
     } catch (error) {
       console.error(`handleSaveAndNext failed: ${(error as Error).message}`);
+      setLlmError(`Could not save: ${(error as Error).message}`);
+      setLlmStatus("error");
       return false;
     }
   };

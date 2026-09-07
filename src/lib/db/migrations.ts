@@ -75,7 +75,7 @@ export function createTables(sqlite: Database.Database) {
   // Create tables
   sqlite.exec(`
     CREATE TABLE IF NOT EXISTS projects (
-      id TEXT PRIMARY KEY,
+      id TEXT PRIMARY KEY NOT NULL,
       name TEXT NOT NULL,
       current_step INTEGER NOT NULL DEFAULT 1,
       status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft', 'in_progress', 'completed')),
@@ -84,7 +84,7 @@ export function createTables(sqlite: Database.Database) {
     );
 
     CREATE TABLE IF NOT EXISTS research_data (
-      id TEXT PRIMARY KEY,
+      id TEXT PRIMARY KEY NOT NULL,
       project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
       topic TEXT NOT NULL,
       depth TEXT NOT NULL DEFAULT 'detailed' CHECK(depth IN ('quick', 'detailed', 'comprehensive')),
@@ -95,7 +95,7 @@ export function createTables(sqlite: Database.Database) {
     );
 
     CREATE TABLE IF NOT EXISTS content_data (
-      id TEXT PRIMARY KEY,
+      id TEXT PRIMARY KEY NOT NULL,
       project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
       title TEXT,
       format TEXT NOT NULL DEFAULT 'presentation' CHECK(format IN ('presentation', 'tutorial', 'explainer')),
@@ -107,7 +107,7 @@ export function createTables(sqlite: Database.Database) {
     );
 
     CREATE TABLE IF NOT EXISTS slides (
-      id TEXT PRIMARY KEY,
+      id TEXT PRIMARY KEY NOT NULL,
       project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
       "index" INTEGER NOT NULL,
       markdown TEXT NOT NULL,
@@ -120,7 +120,7 @@ export function createTables(sqlite: Database.Database) {
     );
 
     CREATE TABLE IF NOT EXISTS scripts (
-      id TEXT PRIMARY KEY,
+      id TEXT PRIMARY KEY NOT NULL,
       project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
       slide_id TEXT REFERENCES slides(id) ON DELETE CASCADE,
       slide_index INTEGER NOT NULL,
@@ -133,7 +133,7 @@ export function createTables(sqlite: Database.Database) {
     );
 
     CREATE TABLE IF NOT EXISTS recordings (
-      id TEXT PRIMARY KEY,
+      id TEXT PRIMARY KEY NOT NULL,
       project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
       slide_id TEXT REFERENCES slides(id) ON DELETE CASCADE,
       slide_index INTEGER,
@@ -145,7 +145,7 @@ export function createTables(sqlite: Database.Database) {
     );
 
     CREATE TABLE IF NOT EXISTS analysis_results (
-      id TEXT PRIMARY KEY,
+      id TEXT PRIMARY KEY NOT NULL,
       recording_id TEXT NOT NULL REFERENCES recordings(id) ON DELETE CASCADE,
       project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
       overall_score REAL,
@@ -164,7 +164,7 @@ export function createTables(sqlite: Database.Database) {
     );
 
     CREATE TABLE IF NOT EXISTS videos (
-      id TEXT PRIMARY KEY,
+      id TEXT PRIMARY KEY NOT NULL,
       project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
       output_path TEXT,
       duration REAL,
@@ -179,7 +179,7 @@ export function createTables(sqlite: Database.Database) {
     );
 
     CREATE TABLE IF NOT EXISTS sources (
-      id TEXT PRIMARY KEY,
+      id TEXT PRIMARY KEY NOT NULL,
       project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
       type TEXT NOT NULL CHECK(type IN ('url', 'text', 'manual')),
       url TEXT,
@@ -195,7 +195,7 @@ export function createTables(sqlite: Database.Database) {
     );
 
     CREATE TABLE IF NOT EXISTS claims (
-      id TEXT PRIMARY KEY,
+      id TEXT PRIMARY KEY NOT NULL,
       project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
       text TEXT NOT NULL,
       source_ids TEXT NOT NULL DEFAULT '[]',
@@ -207,7 +207,7 @@ export function createTables(sqlite: Database.Database) {
     );
 
     CREATE TABLE IF NOT EXISTS outline_items (
-      id TEXT PRIMARY KEY,
+      id TEXT PRIMARY KEY NOT NULL,
       project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
       "index" INTEGER NOT NULL,
       title TEXT NOT NULL,
@@ -220,7 +220,7 @@ export function createTables(sqlite: Database.Database) {
     );
 
     CREATE TABLE IF NOT EXISTS exports (
-      id TEXT PRIMARY KEY,
+      id TEXT PRIMARY KEY NOT NULL,
       project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
       video_id TEXT REFERENCES videos(id) ON DELETE SET NULL,
       status TEXT NOT NULL DEFAULT 'pending'
@@ -238,13 +238,13 @@ export function createTables(sqlite: Database.Database) {
     );
 
     CREATE TABLE IF NOT EXISTS settings (
-      key TEXT PRIMARY KEY,
+      key TEXT PRIMARY KEY NOT NULL,
       value TEXT,
       updated_at INTEGER NOT NULL
     );
 
     CREATE TABLE IF NOT EXISTS agent_runs (
-      id TEXT PRIMARY KEY,
+      id TEXT PRIMARY KEY NOT NULL,
       project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
       status TEXT NOT NULL DEFAULT 'idle'
         CHECK(status IN ('idle', 'running', 'paused', 'completed', 'error', 'cancelled')),
@@ -261,7 +261,7 @@ export function createTables(sqlite: Database.Database) {
     );
 
     CREATE TABLE IF NOT EXISTS agent_steps (
-      id TEXT PRIMARY KEY,
+      id TEXT PRIMARY KEY NOT NULL,
       run_id TEXT NOT NULL REFERENCES agent_runs(id) ON DELETE CASCADE,
       step TEXT NOT NULL,
       status TEXT NOT NULL DEFAULT 'pending'
@@ -276,7 +276,7 @@ export function createTables(sqlite: Database.Database) {
     );
 
     CREATE TABLE IF NOT EXISTS video_metadata (
-      id TEXT PRIMARY KEY,
+      id TEXT PRIMARY KEY NOT NULL,
       project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
       titles TEXT NOT NULL DEFAULT '[]',
       selected_title_index INTEGER NOT NULL DEFAULT 0,
@@ -287,7 +287,7 @@ export function createTables(sqlite: Database.Database) {
     );
 
     CREATE TABLE IF NOT EXISTS thumbnails (
-      id TEXT PRIMARY KEY,
+      id TEXT PRIMARY KEY NOT NULL,
       project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
       preset TEXT NOT NULL
         CHECK(preset IN ('bold-text', 'question', 'numbered-list', 'reaction')),
@@ -297,7 +297,7 @@ export function createTables(sqlite: Database.Database) {
     );
 
     CREATE TABLE IF NOT EXISTS clip_suggestions (
-      id TEXT PRIMARY KEY,
+      id TEXT PRIMARY KEY NOT NULL,
       project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
       start_sec REAL NOT NULL,
       end_sec REAL NOT NULL,

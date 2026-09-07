@@ -33,7 +33,7 @@ Structure your research as follows:
 2. **Introduction** - Brief context and why this topic matters
 3. **Main Content** - Detailed exploration of the topic with relevant facts and insights
 4. **Practical Applications** - How viewers can apply this knowledge
-5. **Sources** - List any referenced materials (use placeholder URLs if needed)
+5. **Sources** - List only sources you can identify confidently. Never invent URLs or use placeholder citations; mark claims without verified sources as unverified.
 
 Make the content engaging and suitable for video narration.`;
 }

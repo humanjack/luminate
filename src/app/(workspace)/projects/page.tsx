@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Plus, Video, Trash2, Search, ArrowLeft, ArrowUpDown, CircleAlert, RefreshCw } from "lucide-react";
@@ -36,17 +36,17 @@ export default function ProjectsPage() {
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("date-desc");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [selectionProjects, setSelectionProjects] = useState(projects);
+  if (selectionProjects !== projects) {
+    setSelectionProjects(projects);
+    setSelectedIds(new Set());
+  }
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     loadProjects();
   }, [loadProjects]);
-
-  // Clear selection when projects change
-  useEffect(() => {
-    setSelectedIds(new Set());
-  }, [projects]);
 
   const handleCreateProject = async () => {
     const project = await createProject("Untitled Project");
@@ -94,7 +94,7 @@ export default function ProjectsPage() {
   };
 
   // Filter and sort projects
-  const sortedProjects = useMemo(() => {
+  const sortedProjects = (() => {
     const filtered = projects.filter((p) =>
       p.name.toLowerCase().includes(search.toLowerCase())
     );
@@ -113,7 +113,7 @@ export default function ProjectsPage() {
           return 0;
       }
     });
-  }, [projects, search, sortBy]);
+  })();
 
   const getStatusColor = (status: string) => {
     switch (status) {

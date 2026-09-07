@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { useState, use } from "react";
 import { RefreshCw, AlertCircle, CheckCircle, ChevronLeft, ChevronRight, Settings, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { RadialScore } from "@/components/workflow/charts/radial-score";
 import { RadarChart } from "@/components/workflow/charts/radar-chart";
 import { WpmMeter } from "@/components/workflow/charts/wpm-meter";
+import { useDraftState } from "@/hooks/use-draft-state";
 import { useProjectStore } from "@/stores/project-store";
 import { useSettingsStore } from "@/stores/settings-store";
 import { cn } from "@/lib/utils";
@@ -52,39 +53,35 @@ const PROVIDER_LABELS: Record<string, string> = {
 
 export default function AnalysisPage({ params }: PageProps) {
   const { id } = use(params);
-  const { currentProject, saveAnalysisResult } = useProjectStore();
+  return <AnalysisEditor key={id} id={id} />;
+}
+
+function AnalysisEditor({ id }: { id: string }) {
+  const { currentProject: storedProject, saveAnalysisResult } = useProjectStore();
+  const currentProject = storedProject?.id === id ? storedProject : null;
   const { speechProvider, hasValidSpeechConfig } = useSettingsStore();
 
-  const [analyses, setAnalyses] = useState<AnalysisData[]>([]);
+  const [analyses, setAnalyses] = useDraftState<AnalysisData[]>(
+    (currentProject?.analysisResults ?? []).map((analysis) => ({
+      recordingId: analysis.recordingId,
+      slideIndex: currentProject?.recordings?.findIndex((r) => r.id === analysis.recordingId) ?? 0,
+      overallScore: analysis.overallScore ?? 0,
+      pronunciationScore: analysis.pronunciationScore ?? 0,
+      fluencyScore: analysis.fluencyScore ?? 0,
+      confidenceScore: analysis.confidenceScore ?? 0,
+      naturalnessScore: analysis.naturalnessScore ?? 0,
+      wordsPerMinute: analysis.wordsPerMinute ?? 0,
+      fillerWords: analysis.fillerWords ?? [], recommendations: analysis.recommendations ?? [],
+      transcript: analysis.transcript ?? undefined, diff: (analysis.diff ?? undefined) as DiffOp[] | undefined,
+      provider: analysis.provider ?? undefined,
+    }))
+  );
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analyzingIndex, setAnalyzingIndex] = useState<number | null>(null);
 
   const currentAnalysis = analyses[currentSlideIndex];
   const hasRecordings = (currentProject?.recordings?.length || 0) > 0;
-
-  // Load existing analyses
-  useEffect(() => {
-    if (currentProject?.analysisResults && currentProject.analysisResults.length > 0) {
-      setAnalyses(
-        currentProject.analysisResults.map((a) => ({
-          recordingId: a.recordingId,
-          slideIndex: 0, // Would need to be computed from recording
-          overallScore: a.overallScore || 0,
-          pronunciationScore: a.pronunciationScore || 0,
-          fluencyScore: a.fluencyScore || 0,
-          confidenceScore: a.confidenceScore || 0,
-          naturalnessScore: a.naturalnessScore || 0,
-          wordsPerMinute: a.wordsPerMinute || 0,
-          fillerWords: (a.fillerWords as any) || [],
-          recommendations: (a.recommendations as any) || [],
-          transcript: (a as any).transcript || undefined,
-          diff: ((a as any).diff as DiffOp[] | null) || undefined,
-          provider: (a as any).provider || undefined,
-        }))
-      );
-    }
-  }, [currentProject]);
 
   const analyzeRecording = async (index: number) => {
     const recording = currentProject?.recordings?.[index];
