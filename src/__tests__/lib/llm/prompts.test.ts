@@ -56,6 +56,12 @@ describe("System Prompts", () => {
 });
 
 describe("getResearchPrompt", () => {
+  it("does not request fabricated sources when web research is disabled", () => {
+    const prompt = getResearchPrompt("A topic", "quick");
+    expect(prompt).not.toContain("use placeholder URLs if needed");
+    expect(prompt).toContain("Never invent URLs");
+    expect(prompt).toContain("unverified");
+  });
   it("should include the topic in the prompt", () => {
     const prompt = getResearchPrompt("React Hooks", "quick");
     expect(prompt).toContain("React Hooks");

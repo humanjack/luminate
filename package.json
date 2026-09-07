@@ -16,7 +16,7 @@
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
+    "db:migrate": "node scripts/migrate-db.mjs",
     "db:studio": "drizzle-kit studio"
   },
   "overrides": {

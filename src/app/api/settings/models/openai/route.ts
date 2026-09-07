@@ -36,11 +36,11 @@ export async function POST(request: NextRequest) {
       .sort();
 
     return NextResponse.json({ ok: true, models: ids });
-  } catch (error: any) {
+  } catch (error) {
     console.error("[Models OpenAI] Error:", error);
     return NextResponse.json({
       ok: false,
-      error: `Connection failed: ${error?.message || "Unknown error"}`,
+      error: `Connection failed: ${error instanceof Error ? error.message : "Unknown error"}`,
     });
   }
 }

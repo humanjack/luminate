@@ -10,7 +10,7 @@ import {
 } from "@/lib/research/search";
 import {
   resolveSearchProvider,
-  useInProcessResearch,
+  shouldUseInProcessResearch,
   type ResearchGenerationConfig,
 } from "@/lib/research/generate";
 
@@ -63,11 +63,11 @@ describe("research/search factory", () => {
 
 describe("research/generate seam", () => {
   it("in-process research is gated off by default", () => {
-    expect(useInProcessResearch(baseConfig)).toBe(false);
+    expect(shouldUseInProcessResearch(baseConfig)).toBe(false);
   });
 
   it("in-process research turns on with the flag", () => {
-    expect(useInProcessResearch({ ...baseConfig, enableWebResearch: true })).toBe(true);
+    expect(shouldUseInProcessResearch({ ...baseConfig, enableWebResearch: true })).toBe(true);
   });
 
   it("resolveSearchProvider honors the configured provider", () => {

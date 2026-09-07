@@ -63,7 +63,7 @@ async function* parseSSE(
 }
 
 export function useLLM() {
-  const { llmProvider, hasValidLLMConfig } = useSettingsStore();
+  const { llmProvider, hasValidServerLLMConfig } = useSettingsStore();
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -72,7 +72,7 @@ export function useLLM() {
   const createStream = useCallback(
     (endpoint: string, label: string) =>
       async function* (payload: Record<string, unknown>): AsyncGenerator<StreamingMessage> {
-        if (!hasValidLLMConfig()) {
+        if (!hasValidServerLLMConfig()) {
           yield { type: "error", content: "Please configure your LLM provider in settings." };
           return;
         }
@@ -113,7 +113,7 @@ export function useLLM() {
           setIsStreaming(false);
         }
       },
-    [hasValidLLMConfig]
+    [hasValidServerLLMConfig]
   );
 
   const streamResearch = useCallback(
@@ -140,7 +140,7 @@ export function useLLM() {
     streamScript,
     isStreaming,
     error,
-    hasValidConfig: hasValidLLMConfig(),
+    hasValidConfig: hasValidServerLLMConfig(),
     provider: llmProvider,
   };
 }

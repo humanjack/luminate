@@ -79,6 +79,7 @@ interface SettingsState {
   loadSettings: () => Promise<void>;
   saveSettings: () => Promise<void>;
   hasValidLLMConfig: () => boolean;
+  hasValidServerLLMConfig: () => boolean;
   hasValidSpeechConfig: () => boolean;
 }
 
@@ -219,7 +220,7 @@ export const useSettingsStore = create<SettingsState>()(
           // the sentinel so the stored key is left untouched (never wiped).
           const secretOut = (key: string, value: string) =>
             value === "" && state.secretConfigured[key] ? SECRET_SENTINEL : value;
-          await fetch("/api/settings", {
+          const response = await fetch("/api/settings", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -253,6 +254,18 @@ export const useSettingsStore = create<SettingsState>()(
               defaultTransition: state.defaultTransition,
             }),
           });
+          if (!response.ok) throw new Error("Failed to save settings");
+          // Only acknowledge credentials after the server accepted the save.
+          // Blank fields with an existing configured flag were sent as the
+          // sentinel, so preserve those flags without requiring a reload.
+          const configured = { ...state.secretConfigured };
+          for (const key of SECRET_KEYS) {
+            const value = state[key as keyof SettingsState];
+            if (typeof value === "string" && value !== SECRET_SENTINEL && value.trim()) {
+              configured[key] = true;
+            }
+          }
+          set({ secretConfigured: configured });
         } catch (error) {
           console.error("Failed to save settings:", error);
         }
@@ -271,6 +284,15 @@ export const useSettingsStore = create<SettingsState>()(
         }
         // Claude CLI doesn't need API key
         return true;
+      },
+
+      // Research/content/script resolve secrets on the server. Raw-key
+      // callers (agent, SEO, clips) must keep using hasValidLLMConfig instead.
+      hasValidServerLLMConfig: () => {
+        const state = get();
+        if (state.llmProvider === "claude-cli") return false;
+        const key = `${state.llmProvider}ApiKey` as "anthropicApiKey" | "openaiApiKey" | "googleApiKey";
+        return !!state.secretConfigured[key] || !!state[key]?.trim();
       },
 
       hasValidSpeechConfig: () => {

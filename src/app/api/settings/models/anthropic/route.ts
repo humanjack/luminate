@@ -37,11 +37,11 @@ export async function POST(request: NextRequest) {
       .sort((a, b) => a.id.localeCompare(b.id));
 
     return NextResponse.json({ ok: true, models });
-  } catch (error: any) {
+  } catch (error) {
     console.error("[Models Anthropic] Error:", error);
     return NextResponse.json({
       ok: false,
-      error: `Connection failed: ${error?.message || "Unknown error"}`,
+      error: `Connection failed: ${error instanceof Error ? error.message : "Unknown error"}`,
     });
   }
 }

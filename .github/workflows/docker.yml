@@ -1,0 +1,21 @@
+name: Docker
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  smoke:
+    name: Container build and persistence
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+      - run: docker compose config --quiet
+      - run: docker build -t luminate-smoke .
+      - run: node scripts/smoke-docker.mjs luminate-smoke
