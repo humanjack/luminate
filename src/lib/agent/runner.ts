@@ -214,27 +214,21 @@ async function runSlidesStep(deps: RunDeps): Promise<CallResult> {
   }
 
   const now = new Date();
-  await db.delete(slides).where(eq(slides.projectId, deps.projectId));
-  const inserted = await Promise.all(
-    parts.map((md, index) =>
-      db
-        .insert(slides)
+  const inserted = db.transaction((tx) => {
+    tx.delete(slides).where(eq(slides.projectId, deps.projectId)).run();
+    const rows = parts.map((md, index) =>
+      tx.insert(slides)
         .values({
-          id: uuid(),
-          projectId: deps.projectId,
-          index,
-          markdown: md,
-          theme: "default",
-          createdAt: now,
-          updatedAt: now,
+          id: uuid(), projectId: deps.projectId, index, markdown: md,
+          theme: "default", createdAt: now, updatedAt: now,
         })
-        .returning()
-    )
-  );
-  await db
-    .update(projects)
-    .set({ currentStep: 4, updatedAt: now })
-    .where(eq(projects.id, deps.projectId));
+        .returning().get()
+    );
+    tx.update(projects)
+      .set({ currentStep: 4, updatedAt: now })
+      .where(eq(projects.id, deps.projectId)).run();
+    return rows;
+  });
 
   const summary = `Parsed ${inserted.length} slides from content markdown.`;
   deps.emit({ type: "step_chunk", runId: deps.runId, step: "slides", content: summary });
@@ -253,7 +247,7 @@ async function runScriptsStep(deps: RunDeps): Promise<CallResult> {
     throw new Error("No slides found — run slides step first.");
   }
 
-  await db.delete(scripts).where(eq(scripts.projectId, deps.projectId));
+  const generated: typeof scripts.$inferInsert[] = [];
 
   let totalIn = 0;
   let totalOut = 0;
@@ -289,7 +283,7 @@ async function runScriptsStep(deps: RunDeps): Promise<CallResult> {
     const words = result.text.trim().split(/\s+/).length;
     const estimatedDuration = Math.round(words / 2.5); // ~150 wpm
 
-    await db.insert(scripts).values({
+    generated.push({
       id: uuid(),
       projectId: deps.projectId,
       slideId: slide.id,
@@ -301,10 +295,16 @@ async function runScriptsStep(deps: RunDeps): Promise<CallResult> {
     });
   }
 
-  await db
-    .update(projects)
-    .set({ currentStep: 5, updatedAt: now })
-    .where(eq(projects.id, deps.projectId));
+  // Do not hold a SQLite transaction open during network calls. Existing scripts
+  // remain usable if any generation fails or the run is cancelled.
+  if (deps.signal?.aborted) throw new Error("Run cancelled by user.");
+  db.transaction((tx) => {
+    tx.delete(scripts).where(eq(scripts.projectId, deps.projectId)).run();
+    tx.insert(scripts).values(generated).run();
+    tx.update(projects)
+      .set({ currentStep: 5, updatedAt: now })
+      .where(eq(projects.id, deps.projectId)).run();
+  });
 
   return { text: fullText, inputTokens: totalIn, outputTokens: totalOut };
 }

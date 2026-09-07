@@ -58,8 +58,6 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       }
     }
 
-    await db.delete(claims).where(eq(claims.projectId, projectId));
-
     const now = new Date();
     const rows: typeof claims.$inferInsert[] = items.map((item) => ({
       id: item.id || uuid(),
@@ -71,9 +69,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       createdAt: now,
       updatedAt: now,
     }));
-    if (rows.length > 0) {
-      await db.insert(claims).values(rows);
-    }
+    db.transaction((tx) => {
+      tx.delete(claims).where(eq(claims.projectId, projectId)).run();
+      if (rows.length > 0) tx.insert(claims).values(rows).run();
+    });
 
     return NextResponse.json(rows, { status: 200 });
   } catch (error) {

@@ -51,10 +51,10 @@ export async function POST(request: NextRequest) {
       valid: false,
       error: "Invalid API key format",
     });
-  } catch (error: any) {
+  } catch (error) {
     return NextResponse.json({
       valid: false,
-      error: `Failed to verify: ${error.message}`,
+      error: `Failed to verify: ${error instanceof Error ? error.message : "Unknown error"}`,
       suggestion: "API key will be verified when you run your first analysis",
     });
   }

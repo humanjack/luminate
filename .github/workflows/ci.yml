@@ -1,9 +1,6 @@
 name: CI
 
-# Gates pull requests and pushes to main on the checks that actually pass today:
-# typecheck (tsc), tests (vitest), and the production build. Lint runs too but is
-# intentionally non-blocking because the repo carries a documented pre-existing
-# eslint baseline (~52 errors) that is tracked separately (see issue #61 / #119).
+# Gate changes on typecheck, coverage tests, production build, and lint.
 on:
   push:
     branches: [main]
@@ -63,10 +60,8 @@ jobs:
       - run: npm run build
 
   lint:
-    name: Lint (non-blocking)
+    name: Lint (eslint)
     runs-on: ubuntu-latest
-    # Surfaces the eslint baseline as annotations without failing the suite.
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7

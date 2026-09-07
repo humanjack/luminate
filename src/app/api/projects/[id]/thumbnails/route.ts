@@ -61,26 +61,20 @@ export async function POST(_request: NextRequest, { params }: RouteParams) {
     numberHook,
   });
 
-  // Replace previous variants
-  await db.delete(thumbnails).where(eq(thumbnails.projectId, id));
   const now = new Date();
-  const inserted = await Promise.all(
-    generated.map((g) =>
-      db
-        .insert(thumbnails)
+  const inserted = db.transaction((tx) => {
+    tx.delete(thumbnails).where(eq(thumbnails.projectId, id)).run();
+    return generated.map((g) =>
+      tx.insert(thumbnails)
         .values({
-          id: uuid(),
-          projectId: id,
-          preset: g.preset,
-          svg: g.svg,
-          selected: false,
-          createdAt: now,
+          id: uuid(), projectId: id, preset: g.preset, svg: g.svg,
+          selected: false, createdAt: now,
         })
-        .returning()
-    )
-  );
+        .returning().get()
+    );
+  });
 
-  return NextResponse.json(inserted.map(([row]) => row));
+  return NextResponse.json(inserted);
 }
 
 // PATCH /api/projects/:id/thumbnails — set the currently selected variant.
@@ -93,23 +87,21 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: "preset required" }, { status: 400 });
   }
 
-  const rows = await db
-    .select()
-    .from(thumbnails)
-    .where(eq(thumbnails.projectId, id));
+  const updated = db.transaction((tx) => {
+    const rows = tx.select().from(thumbnails)
+      .where(eq(thumbnails.projectId, id)).all();
+    const chosen = rows.find((row) => row.preset === body.preset);
+    if (!chosen) return null;
 
-  await Promise.all(
-    rows.map((row) =>
-      db
-        .update(thumbnails)
-        .set({ selected: row.preset === body.preset })
-        .where(eq(thumbnails.id, row.id))
-    )
-  );
-
-  const updated = await db
-    .select()
-    .from(thumbnails)
-    .where(eq(thumbnails.projectId, id));
+    tx.update(thumbnails).set({ selected: false })
+      .where(eq(thumbnails.projectId, id)).run();
+    tx.update(thumbnails).set({ selected: true })
+      .where(eq(thumbnails.id, chosen.id)).run();
+    return tx.select().from(thumbnails)
+      .where(eq(thumbnails.projectId, id)).all();
+  });
+  if (!updated) {
+    return NextResponse.json({ error: "Thumbnail preset not found" }, { status: 404 });
+  }
   return NextResponse.json(updated);
 }

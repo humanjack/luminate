@@ -1,40 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
-import { env } from "@/lib/env";
-
-const BACKEND_URL = env.BACKEND_URL;
+import { fetchWithTimeout } from "@/lib/net/withTimeout";
+import { readJson } from "@/lib/api/validate";
 
 export async function POST(request: NextRequest) {
+  const parsed = await readJson(request);
+  if (!parsed.ok) return parsed.response;
+  const apiKey = (parsed.data as { apiKey?: unknown } | null)?.apiKey;
+  if (typeof apiKey !== "string" || !apiKey.trim()) {
+    return NextResponse.json({ valid: false, error: "API key is required" });
+  }
   try {
-    const body = await request.json();
-    const { apiKey } = body;
-
-    if (!apiKey) {
-      return NextResponse.json({
-        valid: false,
-        error: "API key is required",
-      });
-    }
-
-    // First, save the API key to backend
-    await fetch(`${BACKEND_URL}/api/settings`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ anthropicApiKey: apiKey }),
+    // Read-only validation against Anthropic; verification never persists a key.
+    const response = await fetchWithTimeout("https://api.anthropic.com/v1/models?limit=1", {
+      headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01" }, signal: request.signal,
     });
-
-    // Then verify via backend
-    const response = await fetch(`${BACKEND_URL}/api/settings/verify/anthropic`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+    await response.body?.cancel();
+    return NextResponse.json(response.ok ? { valid: true } : {
+      valid: false, error: `Anthropic returned HTTP ${response.status}. Check the API key and account access.`,
     });
-
-    const result = await response.json();
-    return NextResponse.json(result);
-  } catch (error: any) {
-    console.error("[Verify Anthropic] Error:", error);
-    return NextResponse.json({
-      valid: false,
-      error: `Connection failed: ${error?.message || "Unknown error"}`,
-    });
+  } catch {
+    return NextResponse.json({ valid: false, error: "Could not reach Anthropic. Try again." });
   }
 }

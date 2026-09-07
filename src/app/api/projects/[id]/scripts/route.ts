@@ -23,14 +23,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     const now = new Date();
 
-    // Delete existing scripts
-    await db.delete(scripts).where(eq(scripts.projectId, projectId));
-
-    // Insert new scripts
-    const newScripts = await Promise.all(
-      scriptsData.map(async (script: any) => {
-        const [created] = await db
-          .insert(scripts)
+    const newScripts = db.transaction((tx) => {
+      tx.delete(scripts).where(eq(scripts.projectId, projectId)).run();
+      const inserted = scriptsData.map((script: typeof scripts.$inferInsert) =>
+        tx.insert(scripts)
           .values({
             id: script.id || uuid(),
             projectId,
@@ -42,16 +38,15 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             createdAt: now,
             updatedAt: now,
           })
-          .returning();
-        return created;
-      })
-    );
-
-    // Update project step
-    await db
-      .update(projects)
-      .set({ currentStep: 5, updatedAt: now })
-      .where(eq(projects.id, projectId));
+          .returning()
+          .get()
+      );
+      tx.update(projects)
+        .set({ currentStep: 5, updatedAt: now })
+        .where(eq(projects.id, projectId))
+        .run();
+      return inserted;
+    });
 
     return NextResponse.json(newScripts);
   } catch (error) {

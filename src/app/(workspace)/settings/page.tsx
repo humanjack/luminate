@@ -68,6 +68,30 @@ const DEFAULT_GOOGLE_MODELS: ModelOption[] = [
   { id: "gemini-2.0-flash", label: "Gemini 2.0 Flash (Legacy)" },
 ];
 
+function VerificationBadge({ result }: { result: VerificationResult }) {
+    if (result.status === "idle") return null;
+
+    return (
+      <div className={cn(
+        "flex items-center gap-2 mt-2 p-2 rounded-md text-sm",
+        result.status === "verifying" && "bg-muted text-muted-foreground",
+        result.status === "valid" && "bg-green-500/10 text-green-600 dark:text-green-400",
+        result.status === "invalid" && "bg-red-500/10 text-red-600 dark:text-red-400"
+      )}>
+        {result.status === "verifying" && <Loader2 className="h-4 w-4 animate-spin" />}
+        {result.status === "valid" && <CheckCircle className="h-4 w-4" />}
+        {result.status === "invalid" && <XCircle className="h-4 w-4" />}
+        <span>{result.status === "verifying" ? "Verifying..." : result.message}</span>
+        {result.warning && (
+          <span className="flex items-center gap-1 text-yellow-600 dark:text-yellow-400">
+            <AlertCircle className="h-3 w-3" />
+            {result.warning}
+          </span>
+        )}
+      </div>
+    );
+  }
+
 export default function SettingsPage() {
   const { toast } = useToast();
   const {
@@ -467,10 +491,10 @@ export default function SettingsPage() {
         title: "Models updated",
         description: `Loaded ${fetched.length} model${fetched.length === 1 ? "" : "s"} from ${provider}.`,
       });
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: "Failed to refresh models",
-        description: error?.message || "Unknown error",
+        description: error instanceof Error ? error.message : "Unknown error",
         variant: "destructive",
       });
     } finally {
@@ -478,30 +502,6 @@ export default function SettingsPage() {
     }
   };
 
-  // Verification status component
-  const VerificationBadge = ({ result }: { result: VerificationResult }) => {
-    if (result.status === "idle") return null;
-
-    return (
-      <div className={cn(
-        "flex items-center gap-2 mt-2 p-2 rounded-md text-sm",
-        result.status === "verifying" && "bg-muted text-muted-foreground",
-        result.status === "valid" && "bg-green-500/10 text-green-600 dark:text-green-400",
-        result.status === "invalid" && "bg-red-500/10 text-red-600 dark:text-red-400"
-      )}>
-        {result.status === "verifying" && <Loader2 className="h-4 w-4 animate-spin" />}
-        {result.status === "valid" && <CheckCircle className="h-4 w-4" />}
-        {result.status === "invalid" && <XCircle className="h-4 w-4" />}
-        <span>{result.status === "verifying" ? "Verifying..." : result.message}</span>
-        {result.warning && (
-          <span className="flex items-center gap-1 text-yellow-600 dark:text-yellow-400">
-            <AlertCircle className="h-3 w-3" />
-            {result.warning}
-          </span>
-        )}
-      </div>
-    );
-  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -565,7 +565,8 @@ export default function SettingsPage() {
                   <Select
                     value={llmProvider}
                     onValueChange={(v) => {
-                      setLLMProvider(v as any);
+                      if (v !== "anthropic" && v !== "openai" && v !== "google" && v !== "claude-cli") return;
+                      setLLMProvider(v);
                       // Reset verification when provider changes
                       setAnthropicVerification({ status: "idle" });
                       setOpenaiVerification({ status: "idle" });
@@ -580,14 +581,14 @@ export default function SettingsPage() {
                       <SelectItem value="anthropic">Anthropic API</SelectItem>
                       <SelectItem value="openai">OpenAI API</SelectItem>
                       <SelectItem value="google">Google API</SelectItem>
-                      <SelectItem value="claude-cli">Claude Code CLI</SelectItem>
+                      <SelectItem value="claude-cli" disabled>Claude Code CLI (generation unavailable)</SelectItem>
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">
                     {llmProvider === "anthropic" && "Use the Anthropic API directly with your API key."}
                     {llmProvider === "openai" && "Use the OpenAI API with your API key."}
                     {llmProvider === "google" && "Use the Google Gemini API with your API key."}
-                    {llmProvider === "claude-cli" && "Use the Claude Code CLI (must be installed and configured)."}
+                    {llmProvider === "claude-cli" && "CLI generation is unavailable. Select Anthropic, OpenAI, or Google and save your settings."}
                   </p>
                 </div>
 
@@ -853,7 +854,8 @@ export default function SettingsPage() {
                   <Select
                     value={speechProvider}
                     onValueChange={(v) => {
-                      setSpeechProvider(v as any);
+                      if (v !== "azure" && v !== "openai" && v !== "speechsuper" && v !== "elsa") return;
+                      setSpeechProvider(v);
                       setSpeechSuperVerification({ status: "idle" });
                       setElsaVerification({ status: "idle" });
                       setAzureVerification({ status: "idle" });
@@ -1185,7 +1187,7 @@ export default function SettingsPage() {
                   <Select
                     value={defaultRecordingMode}
                     onValueChange={(v) =>
-                      setRecordingPreferences({ defaultRecordingMode: v as any })
+                      (v === "per-slide" || v === "continuous") && setRecordingPreferences({ defaultRecordingMode: v })
                     }
                   >
                     <SelectTrigger>
@@ -1269,7 +1271,7 @@ export default function SettingsPage() {
                   <Select
                     value={defaultResolution}
                     onValueChange={(v) =>
-                      setVideoPreferences({ defaultResolution: v as any })
+                      (v === "1280x720" || v === "1920x1080" || v === "2560x1440") && setVideoPreferences({ defaultResolution: v })
                     }
                   >
                     <SelectTrigger>
@@ -1288,7 +1290,7 @@ export default function SettingsPage() {
                   <Select
                     value={defaultTransition}
                     onValueChange={(v) =>
-                      setVideoPreferences({ defaultTransition: v as any })
+                      (v === "none" || v === "fade" || v === "slide") && setVideoPreferences({ defaultTransition: v })
                     }
                   >
                     <SelectTrigger>
