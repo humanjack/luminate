@@ -23,8 +23,9 @@ COPY --from=builder --chown=node:node /app/public ./public
 COPY --from=builder --chown=node:node /app/drizzle ./drizzle
 COPY --from=builder --chown=node:node /app/scripts/migrate-db.mjs ./scripts/migrate-db.mjs
 COPY --from=deps --chown=node:node /app/node_modules/drizzle-orm ./node_modules/drizzle-orm
-# Keep the native binary explicit rather than relying only on file tracing.
-COPY --from=deps --chown=node:node /app/node_modules/better-sqlite3/build/Release/better_sqlite3.node ./node_modules/better-sqlite3/build/Release/better_sqlite3.node
+# v13 ships N-API binaries in prebuilds/. Copy the package explicitly because
+# the runtime selects its binary dynamically (outside Next.js file tracing).
+COPY --from=deps --chown=node:node /app/node_modules/better-sqlite3 ./node_modules/better-sqlite3
 USER node
 EXPOSE 3000
 VOLUME ["/data"]
