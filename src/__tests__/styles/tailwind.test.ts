@@ -40,6 +40,14 @@ describe("Tailwind stylesheet integration", () => {
     expect(declarations(".shadow-sm")["--tw-shadow"]).toContain("0 1px 3px 0");
   });
 
+  it("keeps pressed-button scale animated and the dashboard blur at eight pixels", () => {
+    const transition = declarations(".transition-\\[color\\,background-color\\,border-color\\,transform\\,scale\\]");
+    expect(transition["transition-property"]).toContain("scale");
+    expect(declarations(".active\\:scale-\\[0\\.97\\]:active").scale).toBe("0.97");
+    expect(declarations(".backdrop-blur-sm")["--tw-backdrop-blur"]).toContain("--blur-sm");
+    expect(stylesheet.toString()).toContain("--blur-sm: 8px");
+  });
+
   it("scans library slide-theme tokens and preserves sRGB gradients", () => {
     for (const theme of Object.values(THEMES)) {
       for (const token of Object.values(theme).flatMap((value) => value.split(" "))) {
