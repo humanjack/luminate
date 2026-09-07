@@ -30,11 +30,11 @@ export async function POST(request: NextRequest) {
 
     const result = await response.json();
     return NextResponse.json(result);
-  } catch (error: any) {
+  } catch (error) {
     console.error("[Verify Google] Error:", error);
     return NextResponse.json({
       valid: false,
-      error: `Connection failed: ${error?.message || "Unknown error"}`,
+      error: `Connection failed: ${error instanceof Error ? error.message : "Unknown error"}`,
     });
   }
 }

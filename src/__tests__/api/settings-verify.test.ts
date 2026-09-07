@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 
 // Helper to create mock NextRequest
-function createMockRequest(body?: any): NextRequest {
+function createMockRequest(body?: unknown): NextRequest {
   return new NextRequest("http://localhost:3000/api/settings/verify", {
     method: "POST",
     headers: { "Content-Type": "application/json" },

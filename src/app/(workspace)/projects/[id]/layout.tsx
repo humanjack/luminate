@@ -9,7 +9,7 @@ import { WorkflowStepper } from "@/components/workflow/workflow-stepper";
 import { AgentRunPanel } from "@/components/workflow/agent-run-panel";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { useProjectStore } from "@/stores/project-store";
-import { useWorkflowStore } from "@/stores/workflow-store";
+import { useWorkflowStore, type WorkflowStepId } from "@/stores/workflow-store";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -42,27 +42,28 @@ export default function ProjectLayout({ children, params }: ProjectLayoutProps) 
   const [isRenameOpen, setIsRenameOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [newName, setNewName] = useState("");
-  const [notFound, setNotFound] = useState(false);
+  const [missingLocation, setMissingLocation] = useState<string | null>(null);
+  const location = `${id}:${pathname}`;
 
   // Load project on mount and reload on step navigation to ensure fresh data
   useEffect(() => {
     let cancelled = false;
-    setNotFound(false);
+
     loadProject(id).then((project) => {
       if (cancelled) return;
       if (project) {
-        setMaxCompletedStep((project.currentStep - 1) as any);
-        setCurrentStep(project.currentStep as any);
-        setNewName(project.name);
+        setMaxCompletedStep((project.currentStep - 1) as WorkflowStepId);
+        setCurrentStep(project.currentStep as WorkflowStepId);
+        setMissingLocation(null);
       } else {
         // Project couldn't be loaded (deleted, or a stale id from persisted state).
-        setNotFound(true);
+        setMissingLocation(location);
       }
     });
     return () => {
       cancelled = true;
     };
-  }, [id, pathname, loadProject, setMaxCompletedStep, setCurrentStep]);
+  }, [id, pathname, location, loadProject, setMaxCompletedStep, setCurrentStep]);
 
   const handleRename = async () => {
     if (newName.trim()) {
@@ -76,7 +77,7 @@ export default function ProjectLayout({ children, params }: ProjectLayoutProps) 
     router.push("/projects");
   };
 
-  if (notFound) {
+  if (missingLocation === location) {
     return (
       <div className="flex flex-col items-center justify-center h-screen gap-4">
         <div className="text-center">
@@ -136,7 +137,7 @@ export default function ProjectLayout({ children, params }: ProjectLayoutProps) 
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setIsRenameOpen(true)}>
+              <DropdownMenuItem onClick={() => { setNewName(currentProject.name); setIsRenameOpen(true); }}>
                 <Edit className="w-4 h-4 mr-2" />
                 Rename Project
               </DropdownMenuItem>
@@ -160,7 +161,7 @@ export default function ProjectLayout({ children, params }: ProjectLayoutProps) 
       <main id="main-content" className="flex-1 overflow-hidden">{children}</main>
 
       {/* Floating AI agent panel (S1) */}
-      <AgentRunPanel projectId={id} />
+      <AgentRunPanel key={id} projectId={id} />
 
       {/* Rename Dialog */}
       <Dialog open={isRenameOpen} onOpenChange={setIsRenameOpen}>

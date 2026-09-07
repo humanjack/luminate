@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, act } from "@testing-library/react";
 import { OutlineEditor, seedFromMarkdown } from "@/components/workflow/outline-editor";
 import type { OutlineItem, Claim } from "@/lib/db/schema";
 
@@ -38,6 +38,19 @@ describe("seedFromMarkdown", () => {
 });
 
 describe("OutlineEditor (#5)", () => {
+  it("follows initial hydration and preserves unsaved edits during refreshes", () => {
+    const onSave = vi.fn();
+    const { rerender } = render(<OutlineEditor key="p1" initial={[]} onSave={onSave} />);
+    rerender(<OutlineEditor key="p1" initial={[makeItem({ title: "Saved title" })]} onSave={onSave} />);
+    const input = screen.getByLabelText("Outline item 1 title");
+    expect(input).toHaveValue("Saved title");
+    fireEvent.change(input, { target: { value: "My edit" } });
+    rerender(<OutlineEditor key="p1" initial={[makeItem({ title: "Refreshed" })]} fallbackMarkdown="# New generation" onSave={onSave} />);
+    expect(screen.getByLabelText("Outline item 1 title")).toHaveValue("My edit");
+    rerender(<OutlineEditor key="p2" initial={[makeItem({ title: "Second project" })]} onSave={onSave} />);
+    expect(screen.getByLabelText("Outline item 1 title")).toHaveValue("Second project");
+  });
+
   it("renders existing items in index order with an approval count", () => {
     const items = [
       makeItem({ id: "a", index: 0, title: "Intro", approved: true }),
@@ -134,4 +147,20 @@ describe("OutlineEditor (#5)", () => {
     expect(titles[0]).toHaveValue("Intro");
     expect(titles[1]).toHaveValue("Outro");
   });
+});
+
+
+it("follows external outline changes after saving but retains drafts when saving fails", async () => {
+  let items = [makeItem({ id: "a", title: "Original" })];
+  const onSave = vi.fn(async (drafts: Array<{ title: string }>) => { items = [makeItem({ id: "a", title: drafts[0].title })]; });
+  const view = render(<OutlineEditor initial={items} onSave={onSave} />);
+  fireEvent.change(screen.getByLabelText("Outline item 1 title"), { target: { value: "Saved draft" } });
+  await act(async () => fireEvent.click(screen.getByTestId("save-outline")));
+  view.rerender(<OutlineEditor initial={[makeItem({ id: "a", title: "External update" })]} onSave={onSave} />);
+  expect(screen.getByLabelText("Outline item 1 title")).toHaveValue("External update");
+  fireEvent.change(screen.getByLabelText("Outline item 1 title"), { target: { value: "Retry draft" } });
+  onSave.mockRejectedValueOnce(new Error("Offline"));
+  await act(async () => fireEvent.click(screen.getByTestId("save-outline")));
+  view.rerender(<OutlineEditor initial={[makeItem({ id: "a", title: "Another update" })]} onSave={onSave} saveError="Offline" />);
+  expect(screen.getByLabelText("Outline item 1 title")).toHaveValue("Retry draft");
 });

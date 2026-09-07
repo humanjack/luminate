@@ -193,6 +193,7 @@ export const useProjectStore = create<ProjectState>()(
         } catch (error) {
           console.error(`saveResearchData(${projectId}) failed: ${(error as Error).message}`);
           set({ error: (error as Error).message });
+          throw error;
         }
       },
 
@@ -213,6 +214,7 @@ export const useProjectStore = create<ProjectState>()(
         } catch (error) {
           console.error(`saveContentData(${projectId}) failed: ${(error as Error).message}`);
           set({ error: (error as Error).message });
+          throw error;
         }
       },
 
@@ -283,6 +285,7 @@ export const useProjectStore = create<ProjectState>()(
         } catch (error) {
           console.error(`saveScripts(${projectId}) failed: ${(error as Error).message}`);
           set({ error: (error as Error).message });
+          throw error;
         }
       },
 
