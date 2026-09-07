@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Check,
   ClipboardCopy,
@@ -46,11 +46,15 @@ function copy(text: string) {
   }
 }
 
-export function SeoCopilotPanel({ projectId, onMetadataChange }: SeoCopilotPanelProps) {
+export function SeoCopilotPanel(props: SeoCopilotPanelProps) {
+  return <ProjectSeoCopilotPanel key={props.projectId} {...props} />;
+}
+
+function ProjectSeoCopilotPanel({ projectId, onMetadataChange }: SeoCopilotPanelProps) {
   const { llmProvider, anthropicApiKey, claudeModel, hasValidLLMConfig } = useSettingsStore();
 
   const [metadata, setMetadata] = useState<VideoMetadata | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [audience, setAudience] = useState("");
@@ -61,11 +65,13 @@ export function SeoCopilotPanel({ projectId, onMetadataChange }: SeoCopilotPanel
   // Hydrate on mount
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
     fetch(`/api/projects/${projectId}/video-metadata`)
       .then(async (r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (!cancelled) setMetadata(data ?? null);
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) setError(error instanceof Error ? error.message : "Could not load saved SEO.");
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -131,10 +137,7 @@ export function SeoCopilotPanel({ projectId, onMetadataChange }: SeoCopilotPanel
   const titles = metadata?.titles ?? [];
   const tags = metadata?.tags ?? [];
   const description = metadata?.description ?? "";
-  const selectedTitle = useMemo(
-    () => titles[metadata?.selectedTitleIndex ?? 0]?.text ?? "",
-    [titles, metadata?.selectedTitleIndex]
-  );
+  const selectedTitle = titles[metadata?.selectedTitleIndex ?? 0]?.text ?? "";
 
   return (
     <Card data-testid="seo-copilot-panel" className="border-indigo-200 dark:border-indigo-900">
@@ -151,7 +154,7 @@ export function SeoCopilotPanel({ projectId, onMetadataChange }: SeoCopilotPanel
           </div>
           <Button
             onClick={generate}
-            disabled={generating || !canGenerate}
+            disabled={loading || generating || !canGenerate}
             size="sm"
             className="bg-indigo-600 hover:bg-indigo-500"
           >

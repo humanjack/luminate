@@ -84,12 +84,13 @@ export function LLMProgressPanel({
     (status === "preparing" || status === "streaming" || status === "complete") &&
     elapsedMs > 0;
 
-  // Auto-expand when activity starts
-  useEffect(() => {
-    if (status === "preparing" || status === "streaming") {
-      setIsExpanded(true);
-    }
-  }, [status]);
+  // A phase transition opens the panel; a user's collapse remains in effect
+  // for subsequent chunks in that same phase. Adjust before children render.
+  const [previousStatus, setPreviousStatus] = useState(status);
+  if (previousStatus !== status) {
+    setPreviousStatus(status);
+    if (status === "preparing" || status === "streaming") setIsExpanded(true);
+  }
 
   const getStatusIcon = () => {
     switch (status) {

@@ -23,8 +23,8 @@ export function dbFilePath(): string {
  * Root under which media (recordings, exports) is written. Defaults to
  * `<cwd>/public` to preserve Next.js static-serving semantics when
  * LUMINATE_DATA_DIR is unset. When LUMINATE_DATA_DIR IS set (a mounted volume),
- * media lives under it — a deploy that needs those files web-served must mount
- * the volume at `public/` or add a static-serving route (see docs/deployment).
+ * media lives under it. The /recordings and /exports route handlers serve new
+ * files from this root, including files created after a standalone build.
  */
 export function mediaRoot(): string {
   return process.env.LUMINATE_DATA_DIR

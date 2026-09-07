@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useDraftState } from "@/hooks/use-draft-state";
 import {
   Plus,
   Trash2,
@@ -68,25 +68,18 @@ export function OutlineEditor({
   saving = false,
   saveError,
 }: OutlineEditorProps) {
-  const [items, setItems] = useState<DraftOutlineItem[]>([]);
-
-  useEffect(() => {
-    if (initial.length > 0) {
-      setItems(
-        initial.map((it) => ({
-          id: it.id,
-          index: it.index,
-          title: it.title,
-          summary: it.summary ?? "",
-          speakerGoal: it.speakerGoal ?? "",
-          claimIds: it.claimIds ?? [],
-          approved: !!it.approved,
-        }))
-      );
-    } else if (fallbackMarkdown) {
-      setItems(seedFromMarkdown(fallbackMarkdown));
-    }
-  }, [initial, fallbackMarkdown]);
+  const sourceItems: DraftOutlineItem[] = initial.length > 0
+    ? initial.map((item) => ({
+        id: item.id,
+        index: item.index,
+        title: item.title,
+        summary: item.summary ?? "",
+        speakerGoal: item.speakerGoal ?? "",
+        claimIds: item.claimIds ?? [],
+        approved: !!item.approved,
+      }))
+    : seedFromMarkdown(fallbackMarkdown ?? "");
+  const [items, setItems, acknowledgeItems] = useDraftState(sourceItems);
 
   function update(index: number, patch: Partial<DraftOutlineItem>) {
     setItems((prev) =>
@@ -133,7 +126,12 @@ export function OutlineEditor({
   }
 
   async function handleSave() {
-    await onSave(items);
+    try {
+      await onSave(items);
+      acknowledgeItems(items);
+    } catch {
+      // The parent renders saveError. Keep the unsaved draft available to retry.
+    }
   }
 
   const approvedCount = items.filter((it) => it.approved).length;

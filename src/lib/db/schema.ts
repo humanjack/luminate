@@ -1,5 +1,5 @@
-import { sqliteTable, text, integer, real, blob } from "drizzle-orm/sqlite-core";
-import { relations } from "drizzle-orm";
+import { sqliteTable, text, integer, real, blob, index, check } from "drizzle-orm/sqlite-core";
+import { relations, sql } from "drizzle-orm";
 
 // Projects table - main entity
 export const projects = sqliteTable("projects", {
@@ -9,7 +9,9 @@ export const projects = sqliteTable("projects", {
   status: text("status", { enum: ["draft", "in_progress", "completed"] }).notNull().default("draft"),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
-});
+}, (table) => [
+  check("projects_status_check", sql`${table.status} IN ('draft', 'in_progress', 'completed')`),
+]);
 
 // Research data - step 1
 export const researchData = sqliteTable("research_data", {
@@ -21,7 +23,10 @@ export const researchData = sqliteTable("research_data", {
   sources: text("sources", { mode: "json" }).$type<Array<{ title: string; url: string; snippet?: string }>>(),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
-});
+}, (table) => [
+  index("idx_research_project").on(table.projectId),
+  check("research_data_depth_check", sql`${table.depth} IN ('quick', 'detailed', 'comprehensive')`),
+]);
 
 // Content data - step 2
 export const contentData = sqliteTable("content_data", {
@@ -34,7 +39,10 @@ export const contentData = sqliteTable("content_data", {
   markdown: text("markdown"), // Full presentation content
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
-});
+}, (table) => [
+  index("idx_content_project").on(table.projectId),
+  check("content_data_format_check", sql`${table.format} IN ('presentation', 'tutorial', 'explainer')`),
+]);
 
 // Slides - step 3
 export const slides = sqliteTable("slides", {
@@ -49,7 +57,11 @@ export const slides = sqliteTable("slides", {
   outlineItemId: text("outline_item_id"),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
-});
+}, (table) => [
+  index("idx_slides_project").on(table.projectId),
+  index("idx_slides_first").on(table.projectId).where(sql`${table.index} = 0`),
+  index("idx_slides_project_index").on(table.projectId, table.index),
+]);
 
 // Scripts - step 4
 export const scripts = sqliteTable("scripts", {
@@ -64,7 +76,9 @@ export const scripts = sqliteTable("scripts", {
   sourceRefs: text("source_refs", { mode: "json" }).$type<string[]>(),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
-});
+}, (table) => [
+  index("idx_scripts_project").on(table.projectId),
+]);
 
 // Recordings - step 5
 export const recordings = sqliteTable("recordings", {
@@ -77,7 +91,9 @@ export const recordings = sqliteTable("recordings", {
   duration: real("duration"), // seconds
   waveformData: text("waveform_data", { mode: "json" }).$type<number[]>(),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
-});
+}, (table) => [
+  index("idx_recordings_project").on(table.projectId),
+]);
 
 // Analysis results - step 6
 export const analysisResults = sqliteTable("analysis_results", {
@@ -108,7 +124,9 @@ export const analysisResults = sqliteTable("analysis_results", {
   }>>(),
   provider: text("provider"),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
-});
+}, (table) => [
+  index("idx_analysis_project").on(table.projectId),
+]);
 
 // Videos - step 7
 export const videos = sqliteTable("videos", {
@@ -124,7 +142,10 @@ export const videos = sqliteTable("videos", {
   errorMessage: text("error_message"),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
-});
+}, (table) => [
+  index("idx_videos_project").on(table.projectId),
+  check("videos_status_check", sql`${table.status} IN ('pending', 'processing', 'completed', 'failed')`),
+]);
 
 // Sources - first-class research sources (URL, pasted text, manual)
 export const sources = sqliteTable("sources", {
@@ -142,7 +163,11 @@ export const sources = sqliteTable("sources", {
   trustNotes: text("trust_notes"),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
-});
+}, (table) => [
+  index("idx_sources_project").on(table.projectId),
+  check("sources_type_check", sql`${table.type} IN ('url', 'text', 'manual')`),
+  check("sources_status_check", sql`${table.status} IN ('pending', 'fetched', 'approved', 'rejected', 'failed')`),
+]);
 
 // Claims - normalized research claims, each linked to >=0 sources
 export const claims = sqliteTable("claims", {
@@ -157,7 +182,10 @@ export const claims = sqliteTable("claims", {
     .default("proposed"),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
-});
+}, (table) => [
+  index("idx_claims_project").on(table.projectId),
+  check("claims_status_check", sql`${table.status} IN ('proposed', 'approved', 'rejected')`),
+]);
 
 // Outline items - story structure between research and slides
 export const outlineItems = sqliteTable("outline_items", {
@@ -172,7 +200,9 @@ export const outlineItems = sqliteTable("outline_items", {
   approved: integer("approved", { mode: "boolean" }).notNull().default(false),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
-});
+}, (table) => [
+  index("idx_outline_items_project").on(table.projectId),
+]);
 
 // Exports - separate export jobs/artifacts from finished-video metadata
 export const exports = sqliteTable("exports", {
@@ -192,7 +222,10 @@ export const exports = sqliteTable("exports", {
   errorMessage: text("error_message"),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
-});
+}, (table) => [
+  index("idx_exports_project").on(table.projectId),
+  check("exports_status_check", sql`${table.status} IN ('pending', 'rendering', 'encoding', 'completed', 'failed')`),
+]);
 
 // Settings table for API keys and preferences
 export const settings = sqliteTable("settings", {
@@ -218,7 +251,10 @@ export const agentRuns = sqliteTable("agent_runs", {
   errorMessage: text("error_message"),
   startedAt: integer("started_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
   completedAt: integer("completed_at", { mode: "timestamp" }),
-});
+}, (table) => [
+  index("idx_agent_runs_project").on(table.projectId),
+  check("agent_runs_status_check", sql`${table.status} IN ('idle', 'running', 'paused', 'completed', 'error', 'cancelled')`),
+]);
 
 // Per-step record inside an agent run
 export const agentSteps = sqliteTable("agent_steps", {
@@ -235,7 +271,10 @@ export const agentSteps = sqliteTable("agent_steps", {
   errorMessage: text("error_message"),
   startedAt: integer("started_at", { mode: "timestamp" }),
   completedAt: integer("completed_at", { mode: "timestamp" }),
-});
+}, (table) => [
+  index("idx_agent_steps_run").on(table.runId),
+  check("agent_steps_status_check", sql`${table.status} IN ('pending', 'running', 'completed', 'error', 'skipped')`),
+]);
 
 // YouTube metadata generated by the SEO copilot (S2)
 export const videoMetadata = sqliteTable("video_metadata", {
@@ -249,7 +288,9 @@ export const videoMetadata = sqliteTable("video_metadata", {
   tags: text("tags", { mode: "json" }).$type<string[]>().notNull().default([]),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
-});
+}, (table) => [
+  index("idx_video_metadata_project").on(table.projectId),
+]);
 
 // Thumbnail variants generated by the SVG template renderer (S3)
 export const thumbnails = sqliteTable("thumbnails", {
@@ -261,7 +302,11 @@ export const thumbnails = sqliteTable("thumbnails", {
   svg: text("svg").notNull(),
   selected: integer("selected", { mode: "boolean" }).notNull().default(false),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
-});
+}, (table) => [
+  index("idx_thumbnails_project").on(table.projectId),
+  index("idx_thumbnails_selected").on(table.projectId).where(sql`${table.selected} = 1`),
+  check("thumbnails_preset_check", sql`${table.preset} IN ('bold-text', 'question', 'numbered-list', 'reaction')`),
+]);
 
 // Short-clip suggestions extracted from a rendered video (S6)
 export const clipSuggestions = sqliteTable("clip_suggestions", {
@@ -276,7 +321,10 @@ export const clipSuggestions = sqliteTable("clip_suggestions", {
     enum: ["suggested", "kept", "discarded"],
   }).notNull().default("suggested"),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
-});
+}, (table) => [
+  index("idx_clip_suggestions_project").on(table.projectId),
+  check("clip_suggestions_status_check", sql`${table.status} IN ('suggested', 'kept', 'discarded')`),
+]);
 
 // Relations
 export const projectsRelations = relations(projects, ({ one, many }) => ({

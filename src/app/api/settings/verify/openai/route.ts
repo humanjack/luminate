@@ -37,11 +37,11 @@ export async function POST(request: NextRequest) {
       valid: false,
       error: errorMessage,
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("[Verify OpenAI] Error:", error);
     return NextResponse.json({
       valid: false,
-      error: `Connection failed: ${error?.message || "Unknown error"}`,
+      error: `Connection failed: ${error instanceof Error ? error.message : "Unknown error"}`,
     });
   }
 }

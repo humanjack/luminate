@@ -56,11 +56,11 @@ export async function POST(request: NextRequest) {
       valid: false,
       error: "Invalid credentials format",
     });
-  } catch (error: any) {
+  } catch (error) {
     // If we can't reach the API, check format validity
     return NextResponse.json({
       valid: false,
-      error: `Failed to verify: ${error.message}`,
+      error: `Failed to verify: ${error instanceof Error ? error.message : "Unknown error"}`,
       suggestion: "Credentials will be verified when you run your first analysis",
     });
   }
